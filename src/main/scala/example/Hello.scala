@@ -4,7 +4,7 @@ import java.nio.file._
 
 import scala.util.{Failure, Success, Try}
 
-case class DoomConfiguration(doom: String)
+case class DoomConfiguration(bitFlyerApiKey: String, bitFlyerApiSecret: String)
 
 object Hello extends Greeting with App {
   val confFiles = Set(Paths.get("./application.conf"))
@@ -13,7 +13,7 @@ object Hello extends Greeting with App {
     case Success(configResult) =>
       configResult match {
         case Right(conf) =>
-          println("doom conf from file: " + conf.doom)
+          println("doom conf from file read success.")
         case Left(_) =>
           println("doom conf from file read failed.")
       }
