@@ -10,6 +10,7 @@ lazy val root = (project in file(".")).
     name := "Hello",
     libraryDependencies ++= Seq(
       scalaTest % Test,
-      "com.github.pureconfig" %% "pureconfig" % "0.9.0"
+      "com.github.pureconfig" %% "pureconfig" % "0.9.0",
+      "org.scalaj" %% "scalaj-http" % "2.3.0"
     )
   )
