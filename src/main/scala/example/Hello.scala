@@ -1,29 +1,26 @@
 package example
 
 import java.nio.file._
+
 import client.BitFlyerClient
-import scala.util.{Failure, Success, Try}
+import scala.util.control.Exception._
 
 case class DoomConfiguration(bitFlyerApiKey: String, bitFlyerApiSecret: String)
 
 object Hello extends Greeting with App {
   val confFiles = Set(Paths.get("./application.conf"))
 
-  Try(pureconfig.loadConfigFromFiles[DoomConfiguration](confFiles)) match {
-    case Failure(e) =>
-      println("config load failed: " + e.getMessage)
-    case Success(configResult) =>
-      configResult match {
-        case Left(_) =>
-          println("doom conf from file read failed.")
-        case Right(conf) =>
-          println("doom conf from file read success.")
-          val bitFlyerClient = new BitFlyerClient(conf.bitFlyerApiKey, conf.bitFlyerApiSecret)
-          println(bitFlyerClient.getPermissions.body)
-      }
-      println(greeting)
-  }
+  val result = (for {
+    configResult <- (allCatch either pureconfig.loadConfigFromFiles[DoomConfiguration](confFiles))
+      .left.map(e => "config load failed: " + e.getMessage).right
+    config <- configResult.left.map(_ => "doom conf from file read failed").right
+  } yield {
+    val bitFlyerClient = new BitFlyerClient(config.bitFlyerApiKey, config.bitFlyerApiSecret)
+    bitFlyerClient.getPermissions.body
+  }).merge
 
+  println(result)
+  println(greeting)
 }
 
 trait Greeting {
