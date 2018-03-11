@@ -11,6 +11,7 @@ lazy val root = (project in file(".")).
     libraryDependencies ++= Seq(
       scalaTest % Test,
       "com.github.pureconfig" %% "pureconfig" % "0.9.0",
-      "org.scalaj" %% "scalaj-http" % "2.3.0"
+      "org.scalaj" %% "scalaj-http" % "2.3.0",
+      "com.typesafe.play" %% "play-json" % "2.6.7"
     )
   )
