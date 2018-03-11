@@ -1,13 +1,18 @@
-package infra
+package infra.bitflyer
 
 import java.math.BigInteger
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
+
+import domain.client.OrderClient
+import domain.client.single.SingleOrder
+import domain.client.single.SingleOrder.{Limit, Market}
+import infra.Method
 import play.api.libs.json._
 
 import scalaj.http.{Http, HttpRequest, HttpResponse}
 
-class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) {
+class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends OrderClient {
   def getPermissions: HttpResponse[String] = {
     callPrivateApi(Method.Get, "/v1/me/getpermissions", "")
   }
@@ -16,17 +21,8 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) {
     callPublicApi(Method.Get, "/v1/getmarkets", "")
   }
 
-  def postSingleOrder(productCode: String, orderType: String, side: String, price: Int, size: Double, expireMinutes: Int, timeInForce: String): HttpResponse[String] = {
-    val body = Json.obj(
-      "product_code" -> productCode,
-      "child_order_type" -> orderType,
-      "side" -> side,
-      "price" -> price,
-      "size" -> size,
-      "minute_to_expire" -> expireMinutes,
-      "time_in_force" -> timeInForce
-    ).toString()
-    println(body)
+  def postSingleOrder(singleOrder: SingleOrder): HttpResponse[String] = {
+    val body = singleOrderToJson(singleOrder)
     callPrivateApi(Method.Post, "/v1/me/sendchildorder", body)
   }
 
@@ -34,9 +30,9 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) {
     callPrivateApi(Method.Get, "/v1/me/getchildorders", "")
   }
 
-  def cancelAllOrders: HttpResponse[String] = {
+  def postCancelAllOrders(productCode: String): HttpResponse[String] = {
     val body = Json.obj(
-      "product_code" -> "FX_BTC_JPY"
+      "product_code" -> productCode
     ).toString()
     println(body)
     callPrivateApi(Method.Post, "/v1/me/cancelallchildorders", body)
@@ -70,6 +66,22 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) {
     }).method(method.value)
       .timeout(connTimeoutMs = 5000, readTimeoutMs = 10000)
 
+  private[this] def singleOrderToJson(singleOrder: SingleOrder): String = {
+    val orderType = singleOrder match {
+      case Market(_, _, _) => "MARKET"
+      case Limit(_, _, _, _) => "LIMIT"
+    }
+    val price = singleOrder.price.getOrElse(0)
+    Json.obj(
+      "product_code" -> BitFlyerParameterConverter.productCode(singleOrder.productCode),
+      "child_order_type" -> orderType,
+      "side" -> BitFlyerParameterConverter.side(singleOrder.side),
+      "price" -> price,
+      "size" -> singleOrder.size,
+      "minute_to_expire" ->  singleOrder.expireMinutes,
+      "time_in_force" -> BitFlyerParameterConverter.timeInForce(singleOrder.timeInForce)
+    ).toString()
+  }
 
   private[this] def generateHMAC(sharedSecret: String, preHashString: String): String = {
     val secret = new SecretKeySpec(sharedSecret.getBytes, "HmacSHA256")
