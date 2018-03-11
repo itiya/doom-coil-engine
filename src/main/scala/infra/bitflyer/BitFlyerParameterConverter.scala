@@ -2,10 +2,11 @@ package infra.bitflyer
 
 import java.security.InvalidParameterException
 
-import domain.client.single.{ProductCode, Side, TimeInForce}
-import domain.client.single.ProductCode.BtcJpyFx
-import domain.client.single.Side.{Buy, Sell}
-import domain.client.single.TimeInForce.{FOK, GTC, IOC}
+import domain.client.order.ProductCode.BtcJpyFx
+import domain.client.order.Side.{Buy, Sell}
+import domain.client.order.TimeInForce.{FOK, GTC, IOC}
+import domain.client.order.{ProductCode, Side, TimeInForce}
+
 
 object BitFlyerParameterConverter {
   def productCode(productCode: ProductCode): String =

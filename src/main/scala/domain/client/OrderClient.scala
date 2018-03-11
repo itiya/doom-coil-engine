@@ -1,6 +1,6 @@
 package domain.client
 
-import domain.client.single.SingleOrder
+import domain.client.order.single.SingleOrder
 
 import scalaj.http.HttpResponse
 

@@ -1,8 +1,9 @@
-package domain.client.single
+package domain.client.order.single
 
-import domain.client.single.TimeInForce.GTC
+import domain.client.order.TimeInForce.GTC
+import domain.client.order.{Order, ProductCode, Side, TimeInForce}
 
-sealed trait SingleOrder {
+sealed trait SingleOrder extends Order {
   val productCode: ProductCode
   val side: Side
   val price: Option[Int]

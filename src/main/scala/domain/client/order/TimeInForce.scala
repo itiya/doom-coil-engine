@@ -1,4 +1,4 @@
-package domain.client.single
+package domain.client.order
 
 sealed trait TimeInForce
 

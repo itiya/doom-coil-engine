@@ -1,12 +1,16 @@
 package infra.bitflyer
 
 import java.math.BigInteger
+import java.security.InvalidParameterException
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
 import domain.client.OrderClient
-import domain.client.single.SingleOrder
-import domain.client.single.SingleOrder.{Limit, Market}
+import domain.client.order.Order
+import domain.client.order.single.SingleOrder
+import domain.client.order.single.SingleOrder.{Limit, Market}
+import domain.client.order.special.OrderWithLogic
+import domain.client.order.special.OrderWithLogic.{IFD, IFO, OCO}
 import infra.Method
 import play.api.libs.json._
 
@@ -26,6 +30,24 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends 
     callPrivateApi(Method.Post, "/v1/me/sendchildorder", body)
   }
 
+  def postSpecialOrder(logic: OrderWithLogic): HttpResponse[String] = {
+    val (orderMethod, parameters) = logic match {
+      case IFD(_, _, pre, post) =>
+        ("IFD", singleOrderToJsonForSpecialOrder(Seq(pre, post)))
+      case OCO(_, _, order, otherOrder) =>
+        ("OCO", singleOrderToJsonForSpecialOrder(Seq(order, otherOrder)))
+      case IFO(_, _, preOrder, postOrder) =>
+        ("IFDOCO", singleOrderToJsonForSpecialOrder(Seq(preOrder, postOrder.order, postOrder.otherOrder)))
+    }
+    val body = Json.obj(
+      "order_method" -> orderMethod,
+      "minute_to_expire" -> logic.expireMinutes,
+      "time_in_force" -> BitFlyerParameterConverter.timeInForce(logic.timeInForce),
+      "parameters" -> JsArray(parameters)
+    ).toString()
+    callPrivateApi(Method.Post, "/v1/me/sendparentorder", body)
+  }
+
   def getSingleOrders: HttpResponse[String] = {
     callPrivateApi(Method.Get, "/v1/me/getchildorders", "")
   }
@@ -34,7 +56,6 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends 
     val body = Json.obj(
       "product_code" -> productCode
     ).toString()
-    println(body)
     callPrivateApi(Method.Post, "/v1/me/cancelallchildorders", body)
   }
 
@@ -65,6 +86,25 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends 
         Http("https://api.bitflyer.jp" + path)
     }).method(method.value)
       .timeout(connTimeoutMs = 5000, readTimeoutMs = 10000)
+
+  private[this] def singleOrderToJsonForSpecialOrder(orders: Seq[Order]): Seq[JsObject] = {
+    orders.map {
+      case singleOrder: SingleOrder =>
+        val orderType = singleOrder match {
+          case Market(_, _, _) => "MARKET"
+          case Limit(_, _, _, _) => "LIMIT"
+        }
+        val price = singleOrder.price.getOrElse(0)
+        Json.obj(
+          "product_code" -> BitFlyerParameterConverter.productCode(singleOrder.productCode),
+          "condition_type" -> orderType,
+          "side" -> BitFlyerParameterConverter.side(singleOrder.side),
+          "price" -> price,
+          "size" -> singleOrder.size
+        )
+      case _ => throw new InvalidParameterException("except single order is not implemented")
+    }
+  }
 
   private[this] def singleOrderToJson(singleOrder: SingleOrder): String = {
     val orderType = singleOrder match {

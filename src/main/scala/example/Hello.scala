@@ -2,9 +2,11 @@ package example
 
 import java.nio.file._
 
-import domain.client.single.ProductCode.BtcJpyFx
-import domain.client.single.Side.{Buy, Sell}
-import domain.client.single.SingleOrder.{Limit, Market}
+import domain.client.order.ProductCode.BtcJpyFx
+import domain.client.order.Side.{Buy, Sell}
+import domain.client.order.TimeInForce.GTC
+import domain.client.order.single.SingleOrder.Limit
+import domain.client.order.special.OrderWithLogic.{IFD, IFO, OCO}
 import infra.bitflyer.BitFlyerClient
 
 import scala.util.control.Exception._
@@ -20,9 +22,9 @@ object Hello extends Greeting with App {
     config <- configResult.left.map(_ => "doom conf from file read failed").right
   } yield {
     val bitFlyerClient = new BitFlyerClient(config.bitFlyerApiKey, config.bitFlyerApiSecret)
-    //val limitOrder = Limit(BtcJpyFx, Sell, 1000000, 0.001)
-    //bitFlyerClient.postSingleOrder(limitOrder)
-    bitFlyerClient.getPermissions
+    //val logic = IFO(43200, GTC, Limit(BtcJpyFx, Buy, 950000, 0.001), OCO(43200, GTC, Limit(BtcJpyFx, Buy, 950000, 0.001), Limit(BtcJpyFx, Sell, 1500000, 0.001)))
+    //bitFlyerClient.postSpecialOrder(logic)
+    bitFlyerClient.getMarkets.body
   }).merge
 
   println(result)
