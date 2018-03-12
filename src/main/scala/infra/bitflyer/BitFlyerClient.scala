@@ -30,7 +30,7 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends 
     callPrivateApi(Method.Post, "/v1/me/sendchildorder", body)
   }
 
-  def postSpecialOrder(logic: OrderWithLogic): HttpResponse[String] = {
+  def postOrderWithLogic(logic: OrderWithLogic): HttpResponse[String] = {
     val (orderMethod, parameters) = logic match {
       case IFD(_, _, pre, post) =>
         ("IFD", singleOrderToJsonForSpecialOrder(Seq(pre, post)))

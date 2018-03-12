@@ -22,9 +22,16 @@ object Hello extends Greeting with App {
     config <- configResult.left.map(_ => "doom conf from file read failed").right
   } yield {
     val bitFlyerClient = new BitFlyerClient(config.bitFlyerApiKey, config.bitFlyerApiSecret)
-    //val logic = IFO(43200, GTC, Limit(BtcJpyFx, Buy, 950000, 0.001), OCO(43200, GTC, Limit(BtcJpyFx, Buy, 950000, 0.001), Limit(BtcJpyFx, Sell, 1500000, 0.001)))
-    //bitFlyerClient.postSpecialOrder(logic)
-    bitFlyerClient.getMarkets.body
+
+    val profit = 30000
+
+    val rangeTop = Seq(1200000, 1090000).min //1100000
+    val rangeBottom = 750000 //660000
+    println(rangeTop)
+    Range(rangeBottom, rangeTop, 10000).toList.map { buyPrice =>
+      //bitFlyerClient.postOrderWithLogic(IFD(43200, GTC, Limit(BtcJpyFx, Buy, buyPrice, 0.01), Limit(BtcJpyFx, Sell, buyPrice + profit, 0.01))).body
+      ()
+    }
   }).merge
 
   println(result)
