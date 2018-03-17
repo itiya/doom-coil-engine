@@ -62,6 +62,28 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends 
   def getCollateral: HttpResponse[String] =
     callPrivateApi(Method.Get, "/v1/me/getcollateral", "")
 
+  def getOrderWithLogic: Either[String, Seq[Int]] = {
+    val response = callPrivateApi(Method.Get, "/v1/me/getparentorders?parent_order_state=ACTIVE&product_code=FX_BTC_JPY", "").body
+    val json = Json.parse(response)
+    (for {
+      orders <- json.validate[Seq[JsValue]].asEither.right
+    } yield {
+      orders.flatMap { order =>
+        (order \ "price").validate[Int].asOpt
+      }
+    }).left.map(_ => response)
+  }
+
+  def getBoard: Either[String, Int] = {
+    val response = callPrivateApi(Method.Get, "/v1/board?product_code=FX_BTC_JPY", "").body
+    val json = Json.parse(response)
+    (for {
+      price <- (json \ "mid_price").validate[Int].asEither.right
+    } yield {
+      price
+    }).left.map(_ => response)
+  }
+
   private[this] def callPrivateApi(method: Method, path: String, body: String): HttpResponse[String] = {
     val timestamp = java.time.ZonedDateTime.now().toEpochSecond.toString
     val text = timestamp + method.value + path + body

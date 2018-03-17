@@ -8,6 +8,7 @@ import domain.client.order.TimeInForce.GTC
 import domain.client.order.single.SingleOrder.Limit
 import domain.client.order.special.OrderWithLogic.{IFD, IFO, OCO}
 import infra.bitflyer.BitFlyerClient
+import org.joda.time.DateTime
 
 import scala.util.control.Exception._
 
@@ -24,14 +25,29 @@ object Hello extends Greeting with App {
     val bitFlyerClient = new BitFlyerClient(config.bitFlyerApiKey, config.bitFlyerApiSecret)
 
     val profit = 30000
+    val rangeTopLimit = 1200000
+    val rangeBottom = 750000
 
-    val rangeTop = Seq(1200000, 1090000).min //1100000
-    val rangeBottom = 750000 //660000
-    println(rangeTop)
-    Range(rangeBottom, rangeTop, 10000).toList.map { buyPrice =>
-      //bitFlyerClient.postOrderWithLogic(IFD(43200, GTC, Limit(BtcJpyFx, Buy, buyPrice, 0.01), Limit(BtcJpyFx, Sell, buyPrice + profit, 0.01))).body
-      ()
+
+    while (true) {
+
+      val result = for {
+        nowPrice <- bitFlyerClient.getBoard
+        orders <- bitFlyerClient.getOrderWithLogic
+      } yield {
+        val nowPriceLimit = (nowPrice / 10000) * 10000 + 10000
+        val rangeTop = Seq(rangeTopLimit, nowPriceLimit).min
+        Range(rangeBottom, rangeTop, 10000).toSet.diff(orders.toSet).map { buyPrice =>
+          bitFlyerClient.postOrderWithLogic(IFD(43200, GTC, Limit(BtcJpyFx, Buy, buyPrice, 0.01), Limit(BtcJpyFx, Sell, buyPrice + profit, 0.01))).body
+        }
+      }
+      result match {
+        case Left(e) => println(DateTime.now().toString() + " " + e)
+        case Right(r) => if (r.nonEmpty) println(DateTime.now().toString() + " " + r)
+      }
+      Thread.sleep(60 * 1000)
     }
+
   }).merge
 
   println(result)
