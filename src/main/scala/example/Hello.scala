@@ -34,12 +34,16 @@ object Hello extends Greeting with App {
 
       val result = for {
         nowPrice <- companyClient.getBoard
-        orders <- companyClient.getOrderWithLogic
+        orders <- companyClient.getOrdersWithLogic
       } yield {
         val nowPriceLimit = (nowPrice / 10000) * 10000 + 10000
         val rangeTop = Seq(rangeTopLimit, nowPriceLimit).min
         Range(rangeBottom, rangeTop, 10000).toSet.diff(orders.toSet).map { buyPrice =>
-          companyClient.postOrderWithLogic(IFD(43200, GTC, Limit(BtcJpyFx, Buy, buyPrice, 0.01), Limit(BtcJpyFx, Sell, buyPrice + profit, 0.01))).body
+          (for {
+            _ <- companyClient.postOrderWithLogic(IFD(43200, GTC, Limit(BtcJpyFx, Buy, buyPrice, 0.01), Limit(BtcJpyFx, Sell, buyPrice + profit, 0.01))).left.map(_.responseBody).right
+          } yield {
+            buyPrice.toString
+          }).merge
         }
       }
       result match {

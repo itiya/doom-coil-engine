@@ -6,6 +6,7 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
 import domain.client.FinancialCompanyClient
+import domain.client.FinancialCompanyClient.{ClientError, ErrorResponse, Timeout}
 import domain.client.order.Order
 import domain.client.order.single.SingleOrder
 import domain.client.order.single.SingleOrder.{Limit, Market}
@@ -14,6 +15,7 @@ import domain.client.order.logic.OrderWithLogic.{IFD, IFO, OCO}
 import infra.Method
 import play.api.libs.json._
 
+import scala.util.Try
 import scalaj.http.{Http, HttpRequest, HttpResponse}
 
 class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends FinancialCompanyClient {
@@ -30,7 +32,7 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends 
     callPrivateApi(Method.Post, "/v1/me/sendchildorder", body)
   }
 
-  def postOrderWithLogic(logic: OrderWithLogic): HttpResponse[String] = {
+  def postOrderWithLogic(logic: OrderWithLogic): Either[ClientError, Unit] = {
     val (orderMethod, parameters) = logic match {
       case IFD(_, _, pre, post) =>
         ("IFD", singleOrderToJsonForSpecialOrder(Seq(pre, post)))
@@ -45,24 +47,36 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends 
       "time_in_force" -> BitFlyerParameterConverter.timeInForce(logic.timeInForce),
       "parameters" -> JsArray(parameters)
     ).toString()
-    callPrivateApi(Method.Post, "/v1/me/sendparentorder", body)
+
+    (for {
+      result <- Try(callPrivateApi(Method.Post, "/v1/me/sendparentorder", body)).toEither.left.map(e => Timeout(e.getMessage)).right
+    } yield {
+        if (result.code == 200) Right(())
+        else Left(ErrorResponse(result.body))
+    }).joinRight
   }
 
   def getSingleOrders: HttpResponse[String] = {
     callPrivateApi(Method.Get, "/v1/me/getchildorders", "")
   }
 
-  def postCancelAllOrders(productCode: String): HttpResponse[String] = {
+  def postCancelAllOrders(productCode: String): Either[ClientError, Unit] = {
     val body = Json.obj(
       "product_code" -> productCode
     ).toString()
-    callPrivateApi(Method.Post, "/v1/me/cancelallchildorders", body)
+
+    (for {
+      result <- Try(callPrivateApi(Method.Post, "/v1/me/cancelallchildorders", body)).toEither.left.map(e => Timeout(e.getMessage)).right
+    } yield {
+      if (result.code == 200) Right(())
+      else Left(ErrorResponse(result.body))
+    }).joinRight
   }
 
   def getCollateral: HttpResponse[String] =
     callPrivateApi(Method.Get, "/v1/me/getcollateral", "")
 
-  def getOrderWithLogic: Either[String, Seq[Int]] = {
+  def getOrdersWithLogic: Either[String, Seq[Int]] = {
     val response = callPrivateApi(Method.Get, "/v1/me/getparentorders?parent_order_state=ACTIVE&product_code=FX_BTC_JPY", "").body
     val json = Json.parse(response)
     (for {

@@ -7,7 +7,7 @@ lazy val root = (project in file(".")).
       scalaVersion := "2.12.3",
       version      := "0.1.0-SNAPSHOT"
     )),
-    name := "Hello",
+    name := "doom-coil-engine",
     libraryDependencies ++= Seq(
       scalaTest % Test,
       "com.github.pureconfig" %% "pureconfig" % "0.9.0",
