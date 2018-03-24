@@ -5,18 +5,18 @@ import java.security.InvalidParameterException
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
-import domain.client.OrderClient
+import domain.client.FinancialCompanyClient
 import domain.client.order.Order
 import domain.client.order.single.SingleOrder
 import domain.client.order.single.SingleOrder.{Limit, Market}
-import domain.client.order.special.OrderWithLogic
-import domain.client.order.special.OrderWithLogic.{IFD, IFO, OCO}
+import domain.client.order.logic.OrderWithLogic
+import domain.client.order.logic.OrderWithLogic.{IFD, IFO, OCO}
 import infra.Method
 import play.api.libs.json._
 
 import scalaj.http.{Http, HttpRequest, HttpResponse}
 
-class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends OrderClient {
+class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends FinancialCompanyClient {
   def getPermissions: HttpResponse[String] = {
     callPrivateApi(Method.Get, "/v1/me/getpermissions", "")
   }
@@ -106,6 +106,10 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends 
           .postData(body)
       case Method.Get =>
         Http("https://api.bitflyer.jp" + path)
+      case Method.Put =>
+        throw new IllegalArgumentException("method put is not implemented in callApiCommon")
+      case Method.Delete =>
+        throw new IllegalArgumentException("method delete is not implemented in callApiCommon")
     }).method(method.value)
       .timeout(connTimeoutMs = 5000, readTimeoutMs = 10000)
 

@@ -1,4 +1,4 @@
-package domain.client.order.special
+package domain.client.order.logic
 
 import domain.client.order.{Order, TimeInForce}
 
