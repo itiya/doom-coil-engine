@@ -2,10 +2,13 @@ package example
 
 import java.nio.file._
 
+import domain.client.FinancialCompanyClient
 import domain.client.order.OrderSetting.DefaultOrderSetting
 import domain.client.order.Side.{Buy, Sell}
 import domain.client.order.logic.OrderWithLogic.{IFO, OCO}
 import domain.client.order.single.SingleOrder.{Limit, StopLimit}
+import infra.client.bitflyer.BitFlyerClient
+import infra.client.bitflyer.BitFlyerProductCode.BtcJpyFx
 import infra.client.bitmex.BitMexClient
 import infra.client.bitmex.BitMexProductCode.BtcUsdFx
 
@@ -35,13 +38,15 @@ object Hello extends App {
     }
     */
 
-    val bitMexClient: BitMexClient = new BitMexClient(config.bitMexTestApiKey, config.bitMexTestApiSecret, BtcUsdFx)
-    val size = 7100*0.1
-    val preOrder = Limit(Buy, 7100, size)
-    val postOrder = Limit(Sell, 7200, size)
-    val postOtherOrder = StopLimit(Sell, 6000, 6000, size)
-    val oco = OCO(postOrder, postOtherOrder)
-    val ifoOrder = IFO(preOrder, oco)
-    println(bitMexClient.postOrderWithLogic(ifoOrder, DefaultOrderSetting))
+//    val bitMexClient: BitMexClient = new BitMexClient(config.bitMexTestApiKey, config.bitMexTestApiSecret, BtcUsdFx)
+//    val size = 7100*0.1
+//    val preOrder = Limit(Buy, 7100, size)
+//    val postOrder = Limit(Sell, 7200, size)
+//    val postOtherOrder = StopLimit(Sell, 6000, 6000, size)
+//    val oco = OCO(postOrder, postOtherOrder)
+//    val ifoOrder = IFO(preOrder, oco)
+
+    val bitFlyerClient: FinancialCompanyClient = new BitFlyerClient(config.bitFlyerApiKey, config.bitFlyerApiSecret, BtcJpyFx)
+    bitFlyerClient.getCandles(18 + 1).right.map(_.sortWith((c1, c2) => c1.time > c2.time).foreach(println))
   }
 }

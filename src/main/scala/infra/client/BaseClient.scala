@@ -4,20 +4,24 @@ import java.math.BigInteger
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
-import scalaj.http.{Http, HttpRequest}
+import scalaj.http.{Http, HttpRequest, HttpResponse}
 
 trait BaseClient {
   protected[this] val baseUrl: String
 
   protected[this] val productCode: ProductCode
 
-  protected[this] def callApiCommon(method: Method, path: String, body: String): HttpRequest =
+  protected[this] def callPublicApi(method: Method, path: String, body: String, specificBaseUrl: String = baseUrl): HttpResponse[String] =
+    callApiCommon(method, path, body, specificBaseUrl)
+      .asString
+
+  protected[this] def callApiCommon(method: Method, path: String, body: String, specificBaseUrl: String = baseUrl): HttpRequest =
     (method match {
       case Method.Post =>
-        Http(baseUrl + path)
+        Http(specificBaseUrl + path)
           .postData(body)
       case Method.Get =>
-        Http(baseUrl + path)
+        Http(specificBaseUrl + path)
       case Method.Put =>
         throw new IllegalArgumentException("method put is not implemented in callApiCommon")
       case Method.Delete =>

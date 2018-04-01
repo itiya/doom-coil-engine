@@ -72,7 +72,4 @@ class BitMexClient(bitMexApiKey: String, bitMexApiSecret: String, override prote
       .asString
   }
 
-  private[this] def callPublicApi(method: Method, path: String, body: String): HttpResponse[String] =
-    callApiCommon(method, path, body)
-      .asString
 }
