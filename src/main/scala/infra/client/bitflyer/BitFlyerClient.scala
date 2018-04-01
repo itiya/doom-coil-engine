@@ -2,11 +2,13 @@ package infra.client.bitflyer
 
 import java.security.InvalidParameterException
 
-import domain.client.{Candle, FinancialCompanyClient}
+import domain.{Candle, Position}
+import domain.client.FinancialCompanyClient
 import domain.client.FinancialCompanyClient.{ClientError, ErrorResponse, InvalidResponse, Timeout}
+import domain.client.order.Side.{Buy, Sell}
 import domain.client.order.{Order, OrderSetting}
 import domain.client.order.single.SingleOrder
-import domain.client.order.single.SingleOrder.{Limit, Market}
+import domain.client.order.single.SingleOrder.{Limit, Market, Stop}
 import domain.client.order.logic.OrderWithLogic
 import domain.client.order.logic.OrderWithLogic.{IFD, IFO, OCO}
 import infra.client.{BaseClient, Method}
@@ -115,6 +117,74 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
         (order \ "price").validate[Int].asOpt
       }
     }).left.map(_ => response)
+  }
+
+  def getOrders: Either[ClientError, Seq[SingleOrder]] = {
+    val response = (for {
+      result <- Try(callPrivateApi(Method.Get, "/v1/me/getparentorders?parent_order_state=ACTIVE&product_code=FX_BTC_JPY", "")).toEither.left.map(e => Timeout(e.getMessage): ClientError).right
+    } yield {
+      if (result.code == 200) Right(result)
+      else Left(ErrorResponse(result.body))
+    }).joinRight
+    response.right.map { response =>
+      val json = Json.parse(response.body)
+      val rawOrders = json.as[JsArray].value
+      rawOrders.map { rawOrder =>
+        (rawOrder \ "parent_order_type").as[String] match {
+          case "STOP" =>
+            val side = (rawOrder \ "side").as[String] match {
+              case "SELL" => Sell
+              case "BUY" => Buy
+            }
+
+            getParentOrderDetail(Stop(side, (rawOrder \ "price").as[Int], (rawOrder \ "size").as[Double]), (rawOrder \ "parent_order_id").as[String])
+          case _ => throw new NotImplementedException()
+        }
+      }
+    }
+  }
+
+  private[this] def getParentOrderDetail(singleOrder: SingleOrder, id: String): SingleOrder = {
+    val response = (for {
+      result <- Try(callPrivateApi(Method.Get, "/v1/me/getparentorder?parent_order_id=" + id, "")).toEither.left.map(e => Timeout(e.getMessage): ClientError).right
+    } yield {
+      if (result.code == 200) Right(result)
+      else Left(ErrorResponse(result.body))
+    }).joinRight
+    response match {
+      case Right(httpResponse) =>
+        val json = Json.parse(httpResponse.body)
+        singleOrder match {
+          case order: Stop =>
+            val price = ((json \ "parameters").as[JsArray].value.head \ "trigger_price").as[Int]
+            order.copy(_price = price)
+        }
+      case Left(_) =>
+        singleOrder
+    }
+  }
+
+  def getPositions: Either[ClientError, Seq[Position]] = {
+    val response = (for {
+      result <- Try(callPrivateApi(Method.Get, "/v1/me/getpositions?product_code=FX_BTC_JPY", "")).toEither.left.map(e => Timeout(e.getMessage): ClientError).right
+    } yield {
+      if (result.code == 200) Right(result)
+      else Left(ErrorResponse(result.body))
+    }).joinRight
+    response.right.map { response =>
+      val json = Json.parse(response.body)
+      for {
+        positionsJsArray <- json.validate[JsArray].asEither.left.map(_ => InvalidResponse(response.body)).right
+      } yield {
+        positionsJsArray.value.map { rawPosition =>
+          val side = (rawPosition \ "side").as[String] match {
+            case "SELL" => Sell
+            case "BUY" => Buy
+          }
+          Position(side, (rawPosition \ "size").as[Double])
+        }
+      }
+    }.joinRight
   }
 
   def getBoard: Either[String, Int] = {

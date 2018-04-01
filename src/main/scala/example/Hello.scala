@@ -47,6 +47,8 @@ object Hello extends App {
 //    val ifoOrder = IFO(preOrder, oco)
 
     val bitFlyerClient: FinancialCompanyClient = new BitFlyerClient(config.bitFlyerApiKey, config.bitFlyerApiSecret, BtcJpyFx)
-    bitFlyerClient.getCandles(18 + 1).right.map(_.sortWith((c1, c2) => c1.time > c2.time).foreach(println))
+    //bitFlyerClient.getCandles(18 + 1).right.map(_.sortWith((c1, c2) => c1.time > c2.time).foreach(println))
+    bitFlyerClient.getOrders.right.foreach(orders => println(orders))
+    bitFlyerClient.getPositions.right.foreach(positions => println(positions.foldLeft(0.0)((z, n) => z + n.size)))
   }
 }
