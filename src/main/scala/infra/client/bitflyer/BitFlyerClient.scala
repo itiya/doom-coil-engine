@@ -4,7 +4,8 @@ import java.security.InvalidParameterException
 
 import domain.client.FinancialCompanyClient
 import domain.client.FinancialCompanyClient.{ClientError, ErrorResponse, Timeout}
-import domain.client.order.Order
+import domain.client.order.OrderSetting.DefaultOrderSetting
+import domain.client.order.{Order, OrderSetting}
 import domain.client.order.single.SingleOrder
 import domain.client.order.single.SingleOrder.{Limit, Market}
 import domain.client.order.logic.OrderWithLogic
@@ -28,25 +29,25 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
     callPublicApi(Method.Get, "/v1/getmarkets", "")
   }
 
-  def postSingleOrder(singleOrder: SingleOrder): HttpResponse[String] = {
-    val body = singleOrderToJson(singleOrder)
+  def postSingleOrder(singleOrder: SingleOrder, setting: OrderSetting): HttpResponse[String] = {
+    val body = singleOrderToJson(singleOrder, setting)
     callPrivateApi(Method.Post, "/v1/me/sendchildorder", body)
   }
 
-  def postOrderWithLogic(logic: OrderWithLogic): Either[ClientError, Unit] = {
+  def postOrderWithLogic(logic: OrderWithLogic, setting: OrderSetting): Either[ClientError, Unit] = {
     val (orderMethod, parameters) = logic match {
-      case IFD(pre, post, _) =>
+      case IFD(pre, post) =>
         ("IFD", singleOrderToJsonForSpecialOrder(Seq(pre, post)))
-      case OCO(order, otherOrder, _) =>
+      case OCO(order, otherOrder) =>
         ("OCO", singleOrderToJsonForSpecialOrder(Seq(order, otherOrder)))
-      case IFO(preOrder, postOrder, _) =>
+      case IFO(preOrder, postOrder) =>
         ("IFDOCO", singleOrderToJsonForSpecialOrder(Seq(preOrder, postOrder.order, postOrder.otherOrder)))
     }
-    val setting = BitFlyerParameterConverter.orderSetting(logic.setting)
+    val specificSetting = BitFlyerParameterConverter.orderSetting(setting)
     val body = Json.obj(
       "order_method" -> orderMethod,
-      "minute_to_expire" -> setting.expireMinutes,
-      "time_in_force" -> BitFlyerParameterConverter.timeInForce(setting.timeInForce),
+      "minute_to_expire" -> specificSetting.expireMinutes,
+      "time_in_force" -> BitFlyerParameterConverter.timeInForce(specificSetting.timeInForce),
       "parameters" -> JsArray(parameters)
     ).toString()
 
@@ -135,22 +136,22 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
     }
   }
 
-  private[this] def singleOrderToJson(singleOrder: SingleOrder): String = {
+  private[this] def singleOrderToJson(singleOrder: SingleOrder, setting: OrderSetting): String = {
     val orderType = singleOrder match {
       case _: Market => "MARKET"
       case _: Limit => "LIMIT"
       case _ => throw new NotImplementedException()
     }
     val price = singleOrder.price.getOrElse(0)
-    val setting = BitFlyerParameterConverter.orderSetting(singleOrder.setting)
+    val specificSetting = BitFlyerParameterConverter.orderSetting(setting)
     Json.obj(
       "product_code" -> BitFlyerParameterConverter.productCode(productCode),
       "child_order_type" -> orderType,
       "side" -> BitFlyerParameterConverter.side(singleOrder.side),
       "price" -> price,
       "size" -> singleOrder.size,
-      "minute_to_expire" ->  setting.expireMinutes,
-      "time_in_force" -> BitFlyerParameterConverter.timeInForce(setting.timeInForce)
+      "minute_to_expire" ->  specificSetting.expireMinutes,
+      "time_in_force" -> BitFlyerParameterConverter.timeInForce(specificSetting.timeInForce)
     ).toString()
   }
 

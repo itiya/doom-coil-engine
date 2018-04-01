@@ -1,6 +1,8 @@
 package domain.client
 
 import domain.client.FinancialCompanyClient.ClientError
+import domain.client.order.OrderSetting
+import domain.client.order.OrderSetting.DefaultOrderSetting
 import domain.client.order.logic.OrderWithLogic
 
 
@@ -10,8 +12,8 @@ trait FinancialCompanyClient {
   // def getCollateral: HttpResponse[String]
   def getBoard: Either[String, Int] // TODO: 板情報が平均価格以外も取れる必要ができたら汎用的なドメインのcase classにする
 
-  // def postSingleOrder(singleOrder: SingleOrder): HttpResponse[String]
-  def postOrderWithLogic(logic: OrderWithLogic): Either[ClientError, Unit]
+  // def postSingleOrder(singleOrder: SingleOrder, setting: OrderSetting = DefaultOrderSetting): HttpResponse[String]
+  def postOrderWithLogic(logic: OrderWithLogic, setting: OrderSetting = DefaultOrderSetting): Either[ClientError, Unit]
   def postCancelAllOrders(productCode: String): Either[ClientError, Unit]
 }
 

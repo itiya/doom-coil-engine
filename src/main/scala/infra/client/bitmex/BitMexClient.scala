@@ -1,7 +1,7 @@
 package infra.client.bitmex
 
 import domain.client.FinancialCompanyClient.{ClientError, ErrorResponse, Timeout}
-import domain.client.order.Order
+import domain.client.order.{Order, OrderSetting}
 import domain.client.order.logic.OrderWithLogic
 import domain.client.order.logic.OrderWithLogic.{IFD, IFO, OCO}
 import domain.client.order.single.SingleOrder
@@ -17,13 +17,13 @@ class BitMexClient(bitMexApiKey: String, bitMexApiSecret: String, override prote
   //override val baseUrl: String = "https://www.bitmex.com/api/v1"
   override protected[this] val baseUrl: String = "https://testnet.bitmex.com/api/v1"
 
-  def postOrderWithLogic(logic: OrderWithLogic): Either[ClientError, Unit] = {
+  def postOrderWithLogic(logic: OrderWithLogic, setting: OrderSetting): Either[ClientError, Unit] = {
     val parameters = logic match {
       case _: IFD =>
         throw new NotImplementedException()
       case _: OCO =>
         throw new NotImplementedException()
-      case IFO(preOrder, postOrders, _) =>
+      case IFO(preOrder, postOrders) =>
         ifoConverter(preOrder, postOrders.order, postOrders.otherOrder)
     }
 

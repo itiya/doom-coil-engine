@@ -2,6 +2,7 @@ package example
 
 import java.nio.file._
 
+import domain.client.order.OrderSetting.DefaultOrderSetting
 import domain.client.order.Side.{Buy, Sell}
 import domain.client.order.logic.OrderWithLogic.{IFO, OCO}
 import domain.client.order.single.SingleOrder.{Limit, StopLimit}
@@ -41,6 +42,6 @@ object Hello extends App {
     val postOtherOrder = StopLimit(Sell, 6000, 6000, size)
     val oco = OCO(postOrder, postOtherOrder)
     val ifoOrder = IFO(preOrder, oco)
-    println(bitMexClient.postOrderWithLogic(ifoOrder))
+    println(bitMexClient.postOrderWithLogic(ifoOrder, DefaultOrderSetting))
   }
 }
