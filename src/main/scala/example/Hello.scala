@@ -39,8 +39,8 @@ object Hello extends App {
     val preOrder = Limit(Buy, 7100, size)
     val postOrder = Limit(Sell, 7200, size)
     val postOtherOrder = StopLimit(Sell, 6000, 6000, size)
-    val oco = OCO(postOrder.expireMinutes, postOrder.timeInForce, postOrder, postOtherOrder)
-    val ifoOrder = IFO(preOrder.expireMinutes, preOrder.timeInForce, preOrder, oco)
+    val oco = OCO(postOrder, postOtherOrder)
+    val ifoOrder = IFO(preOrder, oco)
     println(bitMexClient.postOrderWithLogic(ifoOrder))
   }
 }

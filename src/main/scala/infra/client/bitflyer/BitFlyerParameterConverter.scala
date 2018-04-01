@@ -2,9 +2,10 @@ package infra.client.bitflyer
 
 import java.security.InvalidParameterException
 
+import domain.client.order.{OrderSetting, Side, TimeInForce}
+import domain.client.order.OrderSetting.{DefaultOrderSetting, SpecificOrderSetting}
 import domain.client.order.Side.{Buy, Sell}
 import domain.client.order.TimeInForce.{FOK, GTC, IOC}
-import domain.client.order.{Side, TimeInForce}
 import infra.client.ProductCode
 import infra.client.bitflyer.BitFlyerProductCode.BtcJpyFx
 
@@ -21,6 +22,13 @@ object BitFlyerParameterConverter {
       case Buy => "BUY"
       case Sell => "SELL"
     }
+
+  def orderSetting(orderSetting: OrderSetting): SpecificOrderSetting = {
+    orderSetting match {
+      case specificOrderSetting: SpecificOrderSetting => specificOrderSetting
+      case DefaultOrderSetting => SpecificOrderSetting(43200, GTC)
+    }
+  }
 
   def timeInForce(timeInForce: TimeInForce): String =
     timeInForce match {

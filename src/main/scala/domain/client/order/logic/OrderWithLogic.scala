@@ -1,14 +1,12 @@
 package domain.client.order.logic
 
-import domain.client.order.{Order, TimeInForce}
+import domain.client.order.OrderSetting.DefaultOrderSetting
+import domain.client.order.{Order, OrderSetting}
 
-sealed trait OrderWithLogic {
-  val expireMinutes: Int
-  val timeInForce: TimeInForce
-}
+sealed trait OrderWithLogic extends Order
 
 object OrderWithLogic {
-  case class IFD(expireMinutes: Int, timeInForce: TimeInForce, preOrder: Order, postOrder: Order) extends OrderWithLogic
-  case class OCO(expireMinutes: Int, timeInForce: TimeInForce, order: Order, otherOrder: Order) extends OrderWithLogic
-  case class IFO(expireMinutes: Int, timeInForce: TimeInForce, preOrder: Order, postOrder: OCO) extends OrderWithLogic
+  case class IFD(preOrder: Order, postOrder: Order, setting: OrderSetting = DefaultOrderSetting) extends OrderWithLogic
+  case class OCO(order: Order, otherOrder: Order, setting: OrderSetting = DefaultOrderSetting) extends OrderWithLogic
+  case class IFO(preOrder: Order, postOrder: OCO, setting: OrderSetting = DefaultOrderSetting) extends OrderWithLogic
 }

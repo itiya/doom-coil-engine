@@ -23,7 +23,7 @@ class BitMexClient(bitMexApiKey: String, bitMexApiSecret: String, override prote
         throw new NotImplementedException()
       case _: OCO =>
         throw new NotImplementedException()
-      case IFO(_, _, preOrder, postOrders) =>
+      case IFO(preOrder, postOrders, _) =>
         ifoConverter(preOrder, postOrders.order, postOrders.otherOrder)
     }
 

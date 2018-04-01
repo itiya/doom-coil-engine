@@ -2,8 +2,9 @@ package infra.client.bitmex
 
 import java.security.InvalidParameterException
 
+import domain.client.order.OrderSetting.{DefaultOrderSetting, SpecificOrderSetting}
 import domain.client.order.Side.{Buy, Sell}
-import domain.client.order.{Side, TimeInForce}
+import domain.client.order.{OrderSetting, Side, TimeInForce}
 import domain.client.order.TimeInForce.{FOK, GTC, IOC}
 import infra.client.ProductCode
 import infra.client.bitmex.BitMexProductCode.BtcUsdFx
@@ -20,6 +21,13 @@ object BitMexParameterConverter {
       case Buy => "Buy"
       case Sell => "Sell"
     }
+
+  def orderSetting(orderSetting: OrderSetting): SpecificOrderSetting = {
+    orderSetting match {
+      case specificOrderSetting: SpecificOrderSetting => specificOrderSetting
+      case DefaultOrderSetting => SpecificOrderSetting(43200, GTC)
+    }
+  }
 
   def timeInForce(timeInForce: TimeInForce): String =
     timeInForce match {

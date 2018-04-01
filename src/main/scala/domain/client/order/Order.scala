@@ -1,3 +1,5 @@
 package domain.client.order
 
-trait Order
+trait Order {
+  val setting: OrderSetting
+}

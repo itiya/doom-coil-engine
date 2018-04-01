@@ -35,17 +35,18 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
 
   def postOrderWithLogic(logic: OrderWithLogic): Either[ClientError, Unit] = {
     val (orderMethod, parameters) = logic match {
-      case IFD(_, _, pre, post) =>
+      case IFD(pre, post, _) =>
         ("IFD", singleOrderToJsonForSpecialOrder(Seq(pre, post)))
-      case OCO(_, _, order, otherOrder) =>
+      case OCO(order, otherOrder, _) =>
         ("OCO", singleOrderToJsonForSpecialOrder(Seq(order, otherOrder)))
-      case IFO(_, _, preOrder, postOrder) =>
+      case IFO(preOrder, postOrder, _) =>
         ("IFDOCO", singleOrderToJsonForSpecialOrder(Seq(preOrder, postOrder.order, postOrder.otherOrder)))
     }
+    val setting = BitFlyerParameterConverter.orderSetting(logic.setting)
     val body = Json.obj(
       "order_method" -> orderMethod,
-      "minute_to_expire" -> logic.expireMinutes,
-      "time_in_force" -> BitFlyerParameterConverter.timeInForce(logic.timeInForce),
+      "minute_to_expire" -> setting.expireMinutes,
+      "time_in_force" -> BitFlyerParameterConverter.timeInForce(setting.timeInForce),
       "parameters" -> JsArray(parameters)
     ).toString()
 
@@ -118,8 +119,8 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
     orders.map {
       case singleOrder: SingleOrder =>
         val orderType = singleOrder match {
-          case Market(_, _) => "MARKET"
-          case Limit(_, _, _) => "LIMIT"
+          case _: Market => "MARKET"
+          case _: Limit => "LIMIT"
           case _ => throw new NotImplementedException()
         }
         val price = singleOrder.price.getOrElse(0)
@@ -136,19 +137,20 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
 
   private[this] def singleOrderToJson(singleOrder: SingleOrder): String = {
     val orderType = singleOrder match {
-      case Market(_, _) => "MARKET"
-      case Limit(_, _, _) => "LIMIT"
+      case _: Market => "MARKET"
+      case _: Limit => "LIMIT"
       case _ => throw new NotImplementedException()
     }
     val price = singleOrder.price.getOrElse(0)
+    val setting = BitFlyerParameterConverter.orderSetting(singleOrder.setting)
     Json.obj(
       "product_code" -> BitFlyerParameterConverter.productCode(productCode),
       "child_order_type" -> orderType,
       "side" -> BitFlyerParameterConverter.side(singleOrder.side),
       "price" -> price,
       "size" -> singleOrder.size,
-      "minute_to_expire" ->  singleOrder.expireMinutes,
-      "time_in_force" -> BitFlyerParameterConverter.timeInForce(singleOrder.timeInForce)
+      "minute_to_expire" ->  setting.expireMinutes,
+      "time_in_force" -> BitFlyerParameterConverter.timeInForce(setting.timeInForce)
     ).toString()
   }
 

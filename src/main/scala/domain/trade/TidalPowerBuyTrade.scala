@@ -24,7 +24,7 @@ trait TidalPowerBuyTrade extends TradeLogic {
         val rangeTop = Seq(rangeTopLimit, nowPriceLimit).min
         Range(rangeBottom, rangeTop, 10000).toSet.diff(orders.toSet).map { buyPrice =>
           (for {
-            _ <- companyClient.postOrderWithLogic(IFD(43200, GTC, Limit(Buy, buyPrice, 0.01), Limit(Sell, buyPrice + profit, 0.01))).left.map(_.responseBody).right
+            _ <- companyClient.postOrderWithLogic(IFD(Limit(Buy, buyPrice, 0.01), Limit(Sell, buyPrice + profit, 0.01))).left.map(_.responseBody).right
           } yield {
             buyPrice.toString
           }).merge
