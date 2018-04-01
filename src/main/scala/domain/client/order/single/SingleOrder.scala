@@ -26,4 +26,10 @@ object SingleOrder {
     override val expireMinutes: Int = defaultExpireMinutes
     override val timeInForce: TimeInForce = GTC
   }
+
+  case class StopLimit(productCode: ProductCode, side: Side, _price: Int, trigger: Int, size: Double) extends SingleOrder {
+    override val price: Option[Int] = Some(_price)
+    override val expireMinutes: Int = defaultExpireMinutes
+    override val timeInForce: TimeInForce = GTC
+  }
 }

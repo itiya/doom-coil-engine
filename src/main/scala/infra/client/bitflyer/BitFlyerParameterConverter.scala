@@ -1,4 +1,4 @@
-package infra.bitflyer
+package infra.client.bitflyer
 
 import java.security.InvalidParameterException
 

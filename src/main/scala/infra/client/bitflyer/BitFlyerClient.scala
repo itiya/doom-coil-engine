@@ -1,9 +1,6 @@
-package infra.bitflyer
+package infra.client.bitflyer
 
-import java.math.BigInteger
 import java.security.InvalidParameterException
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
 
 import domain.client.FinancialCompanyClient
 import domain.client.FinancialCompanyClient.{ClientError, ErrorResponse, Timeout}
@@ -12,13 +9,17 @@ import domain.client.order.single.SingleOrder
 import domain.client.order.single.SingleOrder.{Limit, Market}
 import domain.client.order.logic.OrderWithLogic
 import domain.client.order.logic.OrderWithLogic.{IFD, IFO, OCO}
-import infra.Method
+import infra.client.{BaseClient, Method}
 import play.api.libs.json._
+import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
 import scala.util.Try
 import scalaj.http.{Http, HttpRequest, HttpResponse}
 
-class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends FinancialCompanyClient {
+class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends FinancialCompanyClient with BaseClient {
+
+  override protected[this] val baseUrl: String = "https://api.bitflyer.jp"
+
   def getPermissions: HttpResponse[String] = {
     callPrivateApi(Method.Get, "/v1/me/getpermissions", "")
   }
@@ -113,26 +114,13 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends 
     callApiCommon(method, path, body)
       .asString
 
-  private[this] def callApiCommon(method: Method, path: String, body: String): HttpRequest =
-    (method match {
-      case Method.Post =>
-        Http("https://api.bitflyer.jp" + path)
-          .postData(body)
-      case Method.Get =>
-        Http("https://api.bitflyer.jp" + path)
-      case Method.Put =>
-        throw new IllegalArgumentException("method put is not implemented in callApiCommon")
-      case Method.Delete =>
-        throw new IllegalArgumentException("method delete is not implemented in callApiCommon")
-    }).method(method.value)
-      .timeout(connTimeoutMs = 5000, readTimeoutMs = 10000)
-
   private[this] def singleOrderToJsonForSpecialOrder(orders: Seq[Order]): Seq[JsObject] = {
     orders.map {
       case singleOrder: SingleOrder =>
         val orderType = singleOrder match {
           case Market(_, _, _) => "MARKET"
           case Limit(_, _, _, _) => "LIMIT"
+          case _ => throw new NotImplementedException()
         }
         val price = singleOrder.price.getOrElse(0)
         Json.obj(
@@ -150,6 +138,7 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends 
     val orderType = singleOrder match {
       case Market(_, _, _) => "MARKET"
       case Limit(_, _, _, _) => "LIMIT"
+      case _ => throw new NotImplementedException()
     }
     val price = singleOrder.price.getOrElse(0)
     Json.obj(
@@ -163,11 +152,4 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends 
     ).toString()
   }
 
-  private[this] def generateHMAC(sharedSecret: String, preHashString: String): String = {
-    val secret = new SecretKeySpec(sharedSecret.getBytes, "HmacSHA256")
-    val mac = Mac.getInstance("HmacSHA256")
-    mac.init(secret)
-    val hashString: Array[Byte] = mac.doFinal(preHashString.getBytes)
-    String.format("%032x", new BigInteger(1, hashString))
-  }
 }

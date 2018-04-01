@@ -1,4 +1,4 @@
-package infra
+package infra.client
 
 sealed trait Method {
   def value: String

@@ -6,4 +6,6 @@ object ProductCode {
 
   case object BtcJpyFx extends ProductCode
 
+  case object BtcUsdFx extends ProductCode
+
 }
