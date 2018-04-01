@@ -11,7 +11,7 @@ import domain.client.order.single.SingleOrder
 trait FinancialCompanyClient {
   // def getSingleOrders: HttpResponse[String]
   def getOrdersWithLogic: Either[String, Seq[Int]] // TODO: 注文時の価格以外の情報が必要になったら汎用的なドメインのcase classにする
-  def getOrders: Either[ClientError, Seq[SingleOrder]]
+  def getOrders: Either[ClientError, Seq[OrderWithLogic]]
   def getPositions: Either[ClientError, Seq[Position]]
 
   // def getCollateral: HttpResponse[String]
@@ -21,7 +21,7 @@ trait FinancialCompanyClient {
 
   // def postSingleOrder(singleOrder: SingleOrder, setting: OrderSetting = DefaultOrderSetting): HttpResponse[String]
   def postOrderWithLogic(logic: OrderWithLogic, setting: OrderSetting = DefaultOrderSetting): Either[ClientError, Unit]
-  def postCancelAllOrders(productCode: String): Either[ClientError, Unit]
+  def postCancelSingleOrders(productCode: String): Either[ClientError, Unit]
 }
 
 object FinancialCompanyClient {

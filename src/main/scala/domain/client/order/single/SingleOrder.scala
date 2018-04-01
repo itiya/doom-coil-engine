@@ -21,8 +21,4 @@ object SingleOrder {
   case class StopLimit(side: Side, _price: Int, trigger: Int, size: Double) extends SingleOrder {
     override val price: Option[Int] = Some(_price)
   }
-
-  case class Stop(side: Side, _price: Int, size: Double) extends SingleOrder {
-    override val price: Option[Int] = Some(_price)
-  }
 }

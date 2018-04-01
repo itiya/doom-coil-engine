@@ -8,9 +8,9 @@ import domain.client.FinancialCompanyClient.{ClientError, ErrorResponse, Invalid
 import domain.client.order.Side.{Buy, Sell}
 import domain.client.order.{Order, OrderSetting}
 import domain.client.order.single.SingleOrder
-import domain.client.order.single.SingleOrder.{Limit, Market, Stop}
+import domain.client.order.single.SingleOrder.{Limit, Market}
 import domain.client.order.logic.OrderWithLogic
-import domain.client.order.logic.OrderWithLogic.{IFD, IFO, OCO}
+import domain.client.order.logic.OrderWithLogic.{IFD, IFO, OCO, Stop}
 import infra.client.{BaseClient, Method}
 import play.api.libs.json._
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
@@ -70,6 +70,8 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
         ("OCO", singleOrderToJsonForSpecialOrder(Seq(order, otherOrder)))
       case IFO(preOrder, postOrder) =>
         ("IFDOCO", singleOrderToJsonForSpecialOrder(Seq(preOrder, postOrder.order, postOrder.otherOrder)))
+      case stop: Stop =>
+        ("SIMPLE", stopOrderToJson(stop))
     }
     val specificSetting = BitFlyerParameterConverter.orderSetting(setting)
     val body = Json.obj(
@@ -91,7 +93,7 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
     callPrivateApi(Method.Get, "/v1/me/getchildorders", "")
   }
 
-  def postCancelAllOrders(productCodeStr: String): Either[ClientError, Unit] = {
+  def postCancelSingleOrders(productCodeStr: String): Either[ClientError, Unit] = {
     val body = Json.obj(
       "product_code" -> productCodeStr
     ).toString()
@@ -119,7 +121,7 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
     }).left.map(_ => response)
   }
 
-  def getOrders: Either[ClientError, Seq[SingleOrder]] = {
+  def getOrders: Either[ClientError, Seq[OrderWithLogic]] = {
     val response = (for {
       result <- Try(callPrivateApi(Method.Get, "/v1/me/getparentorders?parent_order_state=ACTIVE&product_code=FX_BTC_JPY", "")).toEither.left.map(e => Timeout(e.getMessage): ClientError).right
     } yield {
@@ -136,7 +138,6 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
               case "SELL" => Sell
               case "BUY" => Buy
             }
-
             getParentOrderDetail(Stop(side, (rawOrder \ "price").as[Int], (rawOrder \ "size").as[Double]), (rawOrder \ "parent_order_id").as[String])
           case _ => throw new NotImplementedException()
         }
@@ -144,7 +145,7 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
     }
   }
 
-  private[this] def getParentOrderDetail(singleOrder: SingleOrder, id: String): SingleOrder = {
+  private[this] def getParentOrderDetail(logic: OrderWithLogic, id: String): OrderWithLogic = {
     val response = (for {
       result <- Try(callPrivateApi(Method.Get, "/v1/me/getparentorder?parent_order_id=" + id, "")).toEither.left.map(e => Timeout(e.getMessage): ClientError).right
     } yield {
@@ -154,13 +155,13 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
     response match {
       case Right(httpResponse) =>
         val json = Json.parse(httpResponse.body)
-        singleOrder match {
+        logic match {
           case order: Stop =>
             val price = ((json \ "parameters").as[JsArray].value.head \ "trigger_price").as[Int]
-            order.copy(_price = price)
+            order.copy(price = price)
         }
       case Left(_) =>
-        singleOrder
+        logic
     }
   }
 
@@ -226,6 +227,17 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
         )
       case _ => throw new InvalidParameterException("except single order is not implemented")
     }
+  }
+
+  private[this] def stopOrderToJson(stop: Stop): Seq[JsObject] = {
+    val json = Json.obj(
+      "product_code" -> BitFlyerParameterConverter.productCode(productCode),
+      "condition_type" -> "STOP",
+      "side" -> BitFlyerParameterConverter.side(stop.side),
+      "trigger_price" -> stop.price,
+      "size" -> stop.size
+    )
+    Seq(json)
   }
 
   private[this] def singleOrderToJson(singleOrder: SingleOrder, setting: OrderSetting): String = {
