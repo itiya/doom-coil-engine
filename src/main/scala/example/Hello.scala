@@ -2,13 +2,11 @@ package example
 
 import java.nio.file._
 
-import domain.client.FinancialCompanyClient
-import domain.client.order.ProductCode.BtcUsdFx
 import domain.client.order.Side.{Buy, Sell}
 import domain.client.order.logic.OrderWithLogic.{IFO, OCO}
 import domain.client.order.single.SingleOrder.{Limit, StopLimit}
-import domain.trade.{TidalPowerBuyTrade, TradeLogic}
 import infra.client.bitmex.BitMexClient
+import infra.client.bitmex.BitMexProductCode.BtcUsdFx
 
 import scala.util.control.Exception._
 
@@ -36,11 +34,11 @@ object Hello extends App {
     }
     */
 
-    val bitMexClient: BitMexClient = new BitMexClient(config.bitMexTestApiKey, config.bitMexTestApiSecret)
+    val bitMexClient: BitMexClient = new BitMexClient(config.bitMexTestApiKey, config.bitMexTestApiSecret, BtcUsdFx)
     val size = 7100*0.1
-    val preOrder = Limit(BtcUsdFx, Buy, 7100, size)
-    val postOrder = Limit(BtcUsdFx, Sell, 7200, size)
-    val postOtherOrder = StopLimit(BtcUsdFx, Sell, 6000, 6000, size)
+    val preOrder = Limit(Buy, 7100, size)
+    val postOrder = Limit(Sell, 7200, size)
+    val postOtherOrder = StopLimit(Sell, 6000, 6000, size)
     val oco = OCO(postOrder.expireMinutes, postOrder.timeInForce, postOrder, postOtherOrder)
     val ifoOrder = IFO(preOrder.expireMinutes, preOrder.timeInForce, preOrder, oco)
     println(bitMexClient.postOrderWithLogic(ifoOrder))

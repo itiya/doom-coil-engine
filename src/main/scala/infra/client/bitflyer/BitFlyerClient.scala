@@ -16,7 +16,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException
 import scala.util.Try
 import scalaj.http.{Http, HttpRequest, HttpResponse}
 
-class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends FinancialCompanyClient with BaseClient {
+class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override protected[this] val productCode: BitFlyerProductCode) extends FinancialCompanyClient with BaseClient {
 
   override protected[this] val baseUrl: String = "https://api.bitflyer.jp"
 
@@ -61,9 +61,9 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends 
     callPrivateApi(Method.Get, "/v1/me/getchildorders", "")
   }
 
-  def postCancelAllOrders(productCode: String): Either[ClientError, Unit] = {
+  def postCancelAllOrders(productCodeStr: String): Either[ClientError, Unit] = {
     val body = Json.obj(
-      "product_code" -> productCode
+      "product_code" -> productCodeStr
     ).toString()
 
     (for {
@@ -118,13 +118,13 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends 
     orders.map {
       case singleOrder: SingleOrder =>
         val orderType = singleOrder match {
-          case Market(_, _, _) => "MARKET"
-          case Limit(_, _, _, _) => "LIMIT"
+          case Market(_, _) => "MARKET"
+          case Limit(_, _, _) => "LIMIT"
           case _ => throw new NotImplementedException()
         }
         val price = singleOrder.price.getOrElse(0)
         Json.obj(
-          "product_code" -> BitFlyerParameterConverter.productCode(singleOrder.productCode),
+          "product_code" -> BitFlyerParameterConverter.productCode(productCode),
           "condition_type" -> orderType,
           "side" -> BitFlyerParameterConverter.side(singleOrder.side),
           "price" -> price,
@@ -136,13 +136,13 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String) extends 
 
   private[this] def singleOrderToJson(singleOrder: SingleOrder): String = {
     val orderType = singleOrder match {
-      case Market(_, _, _) => "MARKET"
-      case Limit(_, _, _, _) => "LIMIT"
+      case Market(_, _) => "MARKET"
+      case Limit(_, _, _) => "LIMIT"
       case _ => throw new NotImplementedException()
     }
     val price = singleOrder.price.getOrElse(0)
     Json.obj(
-      "product_code" -> BitFlyerParameterConverter.productCode(singleOrder.productCode),
+      "product_code" -> BitFlyerParameterConverter.productCode(productCode),
       "child_order_type" -> orderType,
       "side" -> BitFlyerParameterConverter.side(singleOrder.side),
       "price" -> price,

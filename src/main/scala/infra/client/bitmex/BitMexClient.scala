@@ -1,6 +1,5 @@
 package infra.client.bitmex
 
-import com.sun.javaws.exceptions.InvalidArgumentException
 import domain.client.FinancialCompanyClient.{ClientError, ErrorResponse, Timeout}
 import domain.client.order.Order
 import domain.client.order.logic.OrderWithLogic
@@ -12,9 +11,9 @@ import play.api.libs.json.{JsArray, JsObject, Json}
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
 import scala.util.Try
-import scalaj.http.{Http, HttpRequest, HttpResponse}
+import scalaj.http.HttpResponse
 
-class BitMexClient(bitMexApiKey: String, bitMexApiSecret: String) extends BaseClient {
+class BitMexClient(bitMexApiKey: String, bitMexApiSecret: String, override protected[this] val productCode: BitMexProductCode) extends BaseClient {
   //override val baseUrl: String = "https://www.bitmex.com/api/v1"
   override protected[this] val baseUrl: String = "https://testnet.bitmex.com/api/v1"
 
@@ -49,7 +48,7 @@ class BitMexClient(bitMexApiKey: String, bitMexApiSecret: String) extends BaseCl
         }
         val price = singleOrder.price.get
         Json.obj(
-          "symbol" -> BitMexParameterConverter.productCode(singleOrder.productCode),
+          "symbol" -> BitMexParameterConverter.productCode(productCode),
           "side" -> BitMexParameterConverter.side(singleOrder.side),
           "ordType" -> preOrderType,
           "orderQty" -> singleOrder.size,

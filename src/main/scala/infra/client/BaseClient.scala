@@ -9,6 +9,8 @@ import scalaj.http.{Http, HttpRequest}
 trait BaseClient {
   protected[this] val baseUrl: String
 
+  protected[this] val productCode: ProductCode
+
   protected[this] def callApiCommon(method: Method, path: String, body: String): HttpRequest =
     (method match {
       case Method.Post =>

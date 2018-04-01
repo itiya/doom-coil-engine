@@ -1,7 +1,6 @@
 package domain.trade
 
 import domain.client.FinancialCompanyClient
-import domain.client.order.ProductCode.BtcJpyFx
 import domain.client.order.Side.{Buy, Sell}
 import domain.client.order.TimeInForce.GTC
 import domain.client.order.logic.OrderWithLogic.IFD
@@ -25,7 +24,7 @@ trait TidalPowerBuyTrade extends TradeLogic {
         val rangeTop = Seq(rangeTopLimit, nowPriceLimit).min
         Range(rangeBottom, rangeTop, 10000).toSet.diff(orders.toSet).map { buyPrice =>
           (for {
-            _ <- companyClient.postOrderWithLogic(IFD(43200, GTC, Limit(BtcJpyFx, Buy, buyPrice, 0.01), Limit(BtcJpyFx, Sell, buyPrice + profit, 0.01))).left.map(_.responseBody).right
+            _ <- companyClient.postOrderWithLogic(IFD(43200, GTC, Limit(Buy, buyPrice, 0.01), Limit(Sell, buyPrice + profit, 0.01))).left.map(_.responseBody).right
           } yield {
             buyPrice.toString
           }).merge

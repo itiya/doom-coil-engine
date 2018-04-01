@@ -2,10 +2,11 @@ package infra.client.bitmex
 
 import java.security.InvalidParameterException
 
-import domain.client.order.ProductCode.{BtcJpyFx, BtcUsdFx}
 import domain.client.order.Side.{Buy, Sell}
-import domain.client.order.{ProductCode, Side, TimeInForce}
+import domain.client.order.{Side, TimeInForce}
 import domain.client.order.TimeInForce.{FOK, GTC, IOC}
+import infra.client.ProductCode
+import infra.client.bitmex.BitMexProductCode.BtcUsdFx
 
 object BitMexParameterConverter {
   def productCode(productCode: ProductCode): String =
