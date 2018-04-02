@@ -15,6 +15,8 @@ trait ChannelBreakoutTrade extends TradeLogic {
   protected[this] val channelLength: Int
   protected[this] val size: Double
   protected[this] val span: CandleSpan
+  protected[this] val offset: Double
+  protected[this] val updateSec: Int
 
   def trade(): Unit = {
     while (true) {
@@ -26,10 +28,10 @@ trait ChannelBreakoutTrade extends TradeLogic {
       {
         positionSide match {
           case Buy =>
-            postOrder(Stop(Sell, highAndLow.low.toInt - 100, size * 2))
+            postOrder(Stop(Sell, (highAndLow.low - offset).toInt, size * 2))
             println("create buy")
           case Sell =>
-            postOrder(Stop(Buy, highAndLow.high.toInt + 100, size * 2))
+            postOrder(Stop(Buy, (highAndLow.high + offset).toInt, size * 2))
             println("create sell")
         }
         ()
@@ -39,25 +41,24 @@ trait ChannelBreakoutTrade extends TradeLogic {
           if (stop.price != 0.0) {
             stop.side match {
               case Buy =>
-                if (stop.price > highAndLow.high + 100) {
+                if (stop.price > highAndLow.high + offset) {
                   cancelOrders()
-                  postOrder(Stop(Buy, highAndLow.high.toInt + 100, size * 2))
+                  postOrder(Stop(Buy, (highAndLow.high + offset).toInt, size * 2))
                   println(stop.price)
                   println(highAndLow.high)
                   println("update buy")
                 }
               case Sell =>
-                if (stop.price < highAndLow.low - 100) {
+                if (stop.price < highAndLow.low - offset) {
                   cancelOrders()
-                  postOrder(Stop(Sell, highAndLow.low.toInt - 100, size * 2))
+                  postOrder(Stop(Sell, (highAndLow.low - offset).toInt, size * 2))
                   println("update sell")
                 }
             }
           }
         case _ => throw new IllegalArgumentException("規定の注文以外が入っています")
       }
-      println("test")
-      Thread.sleep(60 * 1000)
+      Thread.sleep(updateSec * 1000)
     }
   }
 
