@@ -40,7 +40,7 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
     }).joinRight
     val result = response.right.map { response =>
       val json = Json.parse(response.body)
-      val rawCandles = (json \ "result" \ "60").validate[JsArray]
+      val rawCandles = (json \ "result" \ "3600").validate[JsArray]
       rawCandles.asEither.left.map(_ => InvalidResponse(response.body))
     }.joinRight
     result.right.map { rawCandles =>

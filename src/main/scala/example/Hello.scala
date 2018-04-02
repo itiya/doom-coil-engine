@@ -7,6 +7,7 @@ import domain.client.order.OrderSetting.DefaultOrderSetting
 import domain.client.order.Side.{Buy, Sell}
 import domain.client.order.logic.OrderWithLogic.{IFO, OCO, Stop}
 import domain.client.order.single.SingleOrder.{Limit, StopLimit}
+import domain.trade.ChannelBreakoutTrade
 import infra.client.bitflyer.BitFlyerClient
 import infra.client.bitflyer.BitFlyerProductCode.BtcJpyFx
 import infra.client.bitmex.BitMexClient
@@ -46,11 +47,13 @@ object Hello extends App {
 //    val oco = OCO(postOrder, postOtherOrder)
 //    val ifoOrder = IFO(preOrder, oco)
 
-    val bitFlyerClient: FinancialCompanyClient = new BitFlyerClient(config.bitFlyerApiKey, config.bitFlyerApiSecret, BtcJpyFx)
-    //bitFlyerClient.getCandles(18 + 1).right.map(_.sortWith((c1, c2) => c1.time > c2.time).foreach(println))
-    bitFlyerClient.getOrders.right.foreach(orders => println(orders))
-    bitFlyerClient.getPositions.right.foreach(positions => println(positions.foldLeft(0.0)((z, n) => z + n.size)))
-    val stop = Stop(Buy, 764203, 0.6)
-    //println(bitFlyerClient.postOrderWithLogic(stop))
+    val breakout = new ChannelBreakoutTrade {
+      override protected[this] val companyClient: FinancialCompanyClient = new BitFlyerClient(config.bitFlyerApiKey, config.bitFlyerApiSecret, BtcJpyFx)
+      override protected[this] val channelLength: Int = 18
+      override protected[this] val size: Double = 0.3
+    }
+
+    breakout.trade()
+
   }
 }
