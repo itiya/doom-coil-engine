@@ -1,6 +1,7 @@
 package domain.trade
 
-import domain.{Candle, Position}
+import domain.Position
+import domain.candle.{Candle, CandleSpan}
 import domain.client.FinancialCompanyClient
 import domain.client.order.Side.{Buy, Sell}
 import domain.client.order.logic.OrderWithLogic
@@ -13,6 +14,7 @@ trait ChannelBreakoutTrade extends TradeLogic {
 
   protected[this] val channelLength: Int
   protected[this] val size: Double
+  protected[this] val span: CandleSpan
 
   def trade(): Unit = {
     while (true) {
@@ -54,6 +56,7 @@ trait ChannelBreakoutTrade extends TradeLogic {
           }
         case _ => throw new IllegalArgumentException("規定の注文以外が入っています")
       }
+      println("test")
       Thread.sleep(60 * 1000)
     }
   }
@@ -61,7 +64,7 @@ trait ChannelBreakoutTrade extends TradeLogic {
 
   private[this] def getInfo: (Seq[Candle], Seq[OrderWithLogic], Seq[Position]) = {
     (for {
-      candles <- companyClient.getCandles(channelLength + 1).right
+      candles <- companyClient.getCandles(channelLength + 1, span).right
       orders <- companyClient.getOrders.right
       positions <- companyClient.getPositions.right
     } yield {

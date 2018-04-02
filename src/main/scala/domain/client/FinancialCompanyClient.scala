@@ -1,6 +1,7 @@
 package domain.client
 
-import domain.{Candle, Position}
+import domain.Position
+import domain.candle.{Candle, CandleSpan}
 import domain.client.FinancialCompanyClient.ClientError
 import domain.client.order.OrderSetting
 import domain.client.order.OrderSetting.DefaultOrderSetting
@@ -16,7 +17,7 @@ trait FinancialCompanyClient {
 
   // def getCollateral: HttpResponse[String]
   def getBoard: Either[String, Int] // TODO: 板情報が平均価格以外も取れる必要ができたら汎用的なドメインのcase classにする
-  def getCandles(count: Int): Either[ClientError, Seq[Candle]]
+  def getCandles(count: Int, span: CandleSpan): Either[ClientError, Seq[Candle]]
 
 
   // def postSingleOrder(singleOrder: SingleOrder, setting: OrderSetting = DefaultOrderSetting): HttpResponse[String]

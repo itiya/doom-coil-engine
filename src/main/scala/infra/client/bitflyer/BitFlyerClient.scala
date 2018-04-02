@@ -2,7 +2,10 @@ package infra.client.bitflyer
 
 import java.security.InvalidParameterException
 
-import domain.{Candle, Position}
+import com.sun.javaws.exceptions.InvalidArgumentException
+import domain.Position
+import domain.candle.CandleSpan.{OneHour, OneMinute}
+import domain.candle.{Candle, CandleSpan}
 import domain.client.FinancialCompanyClient
 import domain.client.FinancialCompanyClient.{ClientError, ErrorResponse, InvalidResponse, Timeout}
 import domain.client.order.Side.{Buy, Sell}
@@ -31,7 +34,7 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
     callPublicApi(Method.Get, "/v1/getmarkets", "")
   }
 
-  def getCandles(count: Int): Either[ClientError, Seq[Candle]] = {
+  def getCandles(count: Int, span: CandleSpan): Either[ClientError, Seq[Candle]] = {
     val response = (for {
       result <- Try(callPublicApi(Method.Get, "/markets/bitflyer/btcfxjpy/ohlc", "", cryptoWatchUrl)).toEither.left.map(e => Timeout(e.getMessage): ClientError).right
     } yield {
@@ -40,7 +43,12 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
     }).joinRight
     val result = response.right.map { response =>
       val json = Json.parse(response.body)
-      val rawCandles = (json \ "result" \ "3600").validate[JsArray]
+      val spanInt = span match {
+        case OneHour => 3600
+        case OneMinute => 60
+        case _ => throw new IllegalArgumentException("未実装のローソク足間隔です")
+      }
+      val rawCandles = (json \ "result" \ spanInt.toString).validate[JsArray]
       rawCandles.asEither.left.map(_ => InvalidResponse(response.body))
     }.joinRight
     result.right.map { rawCandles =>

@@ -2,6 +2,8 @@ package example
 
 import java.nio.file._
 
+import domain.candle.CandleSpan
+import domain.candle.CandleSpan.OneHour
 import domain.client.FinancialCompanyClient
 import domain.client.order.OrderSetting.DefaultOrderSetting
 import domain.client.order.Side.{Buy, Sell}
@@ -51,6 +53,7 @@ object Hello extends App {
       override protected[this] val companyClient: FinancialCompanyClient = new BitFlyerClient(config.bitFlyerApiKey, config.bitFlyerApiSecret, BtcJpyFx)
       override protected[this] val channelLength: Int = 18
       override protected[this] val size: Double = 0.3
+      override protected[this] val span: CandleSpan = OneHour
     }
 
     breakout.trade()
