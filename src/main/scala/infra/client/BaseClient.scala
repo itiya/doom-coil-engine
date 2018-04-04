@@ -29,9 +29,9 @@ trait BaseClient {
     }).method(method.value)
       .timeout(connTimeoutMs = 5000, readTimeoutMs = 10000)
 
-  protected[this] def generateHMAC(sharedSecret: String, preHashString: String): String = {
-    val secret = new SecretKeySpec(sharedSecret.getBytes, "HmacSHA256")
-    val mac = Mac.getInstance("HmacSHA256")
+  protected[this] def generateHMAC(sharedSecret: String, preHashString: String, logic: String = "HmacSHA256"): String = {
+    val secret = new SecretKeySpec(sharedSecret.getBytes, logic)
+    val mac = Mac.getInstance(logic)
     mac.init(secret)
     val hashString: Array[Byte] = mac.doFinal(preHashString.getBytes)
     String.format("%032x", new BigInteger(1, hashString))

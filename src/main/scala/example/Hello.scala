@@ -11,9 +11,10 @@ import domain.client.order.logic.OrderWithLogic.{IFO, OCO, Stop}
 import domain.client.order.single.SingleOrder.{Limit, StopLimit}
 import domain.trade.ChannelBreakoutTrade
 import infra.client.bitflyer.BitFlyerClient
-import infra.client.bitflyer.BitFlyerProductCode.BtcJpyFx
 import infra.client.bitmex.BitMexClient
 import infra.client.bitmex.BitMexProductCode.BtcUsdFx
+import infra.client.zaif.ZaifClient
+import infra.client.zaif.ZaifProductCode.BtcJpyFx
 
 import scala.util.control.Exception._
 
@@ -23,7 +24,9 @@ case class DoomConfiguration(
   bitMexApiKey: String,
   bitMexApiSecret: String,
   bitMexTestApiKey: String,
-  bitMexTestApiSecret: String
+  bitMexTestApiSecret: String,
+  zaifApiKey: String,
+  zaifApiSecret: String
 )
 
 object Hello extends App {
@@ -49,16 +52,18 @@ object Hello extends App {
 //    val oco = OCO(postOrder, postOtherOrder)
 //    val ifoOrder = IFO(preOrder, oco)
 
-    val breakout = new ChannelBreakoutTrade {
-      override protected[this] val companyClient: FinancialCompanyClient = new BitFlyerClient(config.bitFlyerApiKey, config.bitFlyerApiSecret, BtcJpyFx)
-      override protected[this] val channelLength: Int = 18
-      override protected[this] val size: Double = 0.3
-      override protected[this] val span: CandleSpan = OneHour
-      override protected[this] val offset: Double = 100.0
-      override protected[this] val updateSec: Int = 60
-    }
+//    val breakout = new ChannelBreakoutTrade {
+//      override protected[this] val companyClient: FinancialCompanyClient = new BitFlyerClient(config.bitFlyerApiKey, config.bitFlyerApiSecret, BtcJpyFx)
+//      override protected[this] val channelLength: Int = 18
+//      override protected[this] val size: Double = 0.3
+//      override protected[this] val span: CandleSpan = OneHour
+//      override protected[this] val offset: Double = 100.0
+//      override protected[this] val updateSec: Int = 60
+//    }
+//
+//    breakout.trade()
 
-    breakout.trade()
-
+    val client: FinancialCompanyClient = new ZaifClient(config.zaifApiKey, config.zaifApiSecret, BtcJpyFx)
+    client.getOrders
   }
 }
