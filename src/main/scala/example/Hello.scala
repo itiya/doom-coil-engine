@@ -9,11 +9,14 @@ import domain.client.order.OrderSetting.DefaultOrderSetting
 import domain.client.order.Side.{Buy, Sell}
 import domain.client.order.logic.OrderWithLogic.{IFO, OCO, Stop}
 import domain.client.order.single.SingleOrder.{Limit, StopLimit}
+import domain.notifier.NotifyLevel.Info
+import domain.notifier.{NotifyMessage, Topic}
 import domain.trade.ChannelBreakoutTrade
 import infra.client.bitflyer.BitFlyerClient
 import infra.client.bitflyer.BitFlyerProductCode.BtcJpyFx
 import infra.client.bitmex.BitMexClient
 import infra.client.bitmex.BitMexProductCode.BtcUsdFx
+import infra.notifier.SlackNotifier
 
 import scala.util.control.Exception._
 
@@ -24,8 +27,8 @@ case class DoomConfiguration(
   bitMexApiSecret: String,
   bitMexTestApiKey: String,
   bitMexTestApiSecret: String,
-  zaifApiKey: String,
-  zaifApiSecret: String
+  slackToken: String,
+  slackNotifyChannel: String
 )
 
 object Hello extends App {
@@ -62,7 +65,8 @@ object Hello extends App {
 //
 //    breakout.trade()
 
-    val client: FinancialCompanyClient = new BitFlyerClient(config.bitFlyerApiKey, config.bitFlyerApiSecret, BtcJpyFx)
-    println(client.getOrders)
+    // val client: FinancialCompanyClient = new BitFlyerClient(config.bitFlyerApiKey, config.bitFlyerApiSecret, BtcJpyFx)
+    // println(client.getOrders)
+    new SlackNotifier(config.slackToken, Seq(config.slackNotifyChannel)).notify(NotifyMessage("試験ノティファイだよー！", Seq(Topic("試験アタッチメントタイトルだよ", "こっちは本文が書けるよ！"))), Info)
   }
 }
