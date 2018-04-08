@@ -2,12 +2,10 @@ package infra.financial_company.bitflyer
 
 import java.security.InvalidParameterException
 
-import com.sun.javaws.exceptions.InvalidArgumentException
 import domain.Position
-import domain.candle.CandleSpan.{OneHour, OneMinute}
 import domain.candle.{Candle, CandleSpan}
 import domain.client.FinancialCompanyClient
-import domain.client.FinancialCompanyClient.{ClientError, ErrorResponse, InvalidResponse, Timeout}
+import domain.client.FinancialCompanyClient.{ClientError, InvalidResponse}
 import domain.client.order.Side.{Buy, Sell}
 import domain.client.order.{Order, OrderSetting}
 import domain.client.order.single.SingleOrder
@@ -19,27 +17,24 @@ import infra.client.{BaseClient, Method}
 import play.api.libs.json._
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
-import scala.util.Try
-import scalaj.http.HttpResponse
-
 class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override protected[this] val productCode: BitFlyerProductCode) extends FinancialCompanyClient with BaseClient {
 
   override protected[this] val baseUrl: String = "https://api.bitflyer.jp"
   private[this] val cryptoWatchClient = new CryptoWatchClient("btcfxjpy")
 
-  def getPermissions: HttpResponse[String] = {
+  def getPermissions: Either[ClientError, String] = {
     callPrivateApi(Method.Get, "/v1/me/getpermissions", "")
   }
 
-  def getMarkets: HttpResponse[String] = {
-    callPublicApi(Method.Get, "/v1/getmarkets", "")
+  def getMarkets: Either[ClientError, String] = {
+    callApi(Method.Get, "/v1/getmarkets", Seq(), "")
   }
 
   def getCandles(count: Int, span: CandleSpan): Either[ClientError, Seq[Candle]] = {
     cryptoWatchClient.getCandles(count, span)
   }
 
-  def postSingleOrder(singleOrder: SingleOrder, setting: OrderSetting): HttpResponse[String] = {
+  def postSingleOrder(singleOrder: SingleOrder, setting: OrderSetting): Either[ClientError, String] = {
     val body = singleOrderToJson(singleOrder, setting)
     callPrivateApi(Method.Post, "/v1/me/sendchildorder", body)
   }
@@ -63,15 +58,10 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
       "parameters" -> JsArray(parameters)
     ).toString()
 
-    (for {
-      result <- Try(callPrivateApi(Method.Post, "/v1/me/sendparentorder", body)).toEither.left.map(e => Timeout(e.getMessage)).right
-    } yield {
-        if (result.code == 200) Right(())
-        else Left(ErrorResponse(result.body))
-    }).joinRight
+    callPrivateApi(Method.Post, "/v1/me/sendparentorder", body).right.map(_ => ())
   }
 
-  def getSingleOrders: HttpResponse[String] = {
+  def getSingleOrders: Either[ClientError, String] = {
     callPrivateApi(Method.Get, "/v1/me/getchildorders", "")
   }
 
@@ -80,38 +70,32 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
       "product_code" -> productCodeStr
     ).toString()
 
-    (for {
-      result <- Try(callPrivateApi(Method.Post, "/v1/me/cancelallchildorders", body)).toEither.left.map(e => Timeout(e.getMessage)).right
-    } yield {
-      if (result.code == 200) Right(())
-      else Left(ErrorResponse(result.body))
-    }).joinRight
+    callPrivateApi(Method.Post, "/v1/me/cancelallchildorders", body).right.map(_ => ())
   }
 
-  def getCollateral: HttpResponse[String] =
+  def getCollateral: Either[ClientError, String] =
     callPrivateApi(Method.Get, "/v1/me/getcollateral", "")
 
-  def getOrdersWithLogic: Either[String, Seq[Int]] = {
-    val response = callPrivateApi(Method.Get, "/v1/me/getparentorders?parent_order_state=ACTIVE&product_code=FX_BTC_JPY", "").body
-    val json = Json.parse(response)
-    (for {
-      orders <- json.validate[Seq[JsValue]].asEither.right
-    } yield {
-      orders.flatMap { order =>
-        (order \ "price").validate[Int].asOpt
-      }
-    }).left.map(_ => response)
+  def getOrdersWithLogic: Either[ClientError, Seq[Int]] = {
+    callPrivateApi(Method.Get, "/v1/me/getparentorders?parent_order_state=ACTIVE&product_code=FX_BTC_JPY", "") match {
+      case Right(response) =>
+        val json = Json.parse(response)
+        (for {
+          orders <- json.validate[Seq[JsValue]].asEither.right
+        } yield {
+          orders.flatMap { order =>
+            (order \ "price").validate[Int].asOpt
+          }
+        }).left.map(_ => InvalidResponse(response))
+      case Left(error) => Left(error)
+    }
+
   }
 
   def getOrders: Either[ClientError, Seq[OrderWithLogic]] = {
-    val response = (for {
-      result <- Try(callPrivateApi(Method.Get, "/v1/me/getparentorders?parent_order_state=ACTIVE&product_code=FX_BTC_JPY", "")).toEither.left.map(e => Timeout(e.getMessage): ClientError).right
-    } yield {
-      if (result.code == 200) Right(result)
-      else Left(ErrorResponse(result.body))
-    }).joinRight
+    val response = callPrivateApi(Method.Get, "/v1/me/getparentorders?parent_order_state=ACTIVE&product_code=FX_BTC_JPY", "")
     response.right.map { response =>
-      val json = Json.parse(response.body)
+      val json = Json.parse(response)
       val rawOrders = json.as[JsArray].value
       rawOrders.map { rawOrder =>
         (rawOrder \ "parent_order_type").as[String] match {
@@ -128,15 +112,10 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
   }
 
   private[this] def getParentOrderDetail(logic: OrderWithLogic, id: String): OrderWithLogic = {
-    val response = (for {
-      result <- Try(callPrivateApi(Method.Get, "/v1/me/getparentorder?parent_order_id=" + id, "")).toEither.left.map(e => Timeout(e.getMessage): ClientError).right
-    } yield {
-      if (result.code == 200) Right(result)
-      else Left(ErrorResponse(result.body))
-    }).joinRight
+    val response = callPrivateApi(Method.Get, "/v1/me/getparentorder?parent_order_id=" + id, "")
     response match {
       case Right(httpResponse) =>
-        val json = Json.parse(httpResponse.body)
+        val json = Json.parse(httpResponse)
         logic match {
           case order: Stop =>
             val price = ((json \ "parameters").as[JsArray].value.head \ "trigger_price").as[Int]
@@ -148,16 +127,11 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
   }
 
   def getPositions: Either[ClientError, Seq[Position]] = {
-    val response = (for {
-      result <- Try(callPrivateApi(Method.Get, "/v1/me/getpositions?product_code=FX_BTC_JPY", "")).toEither.left.map(e => Timeout(e.getMessage): ClientError).right
-    } yield {
-      if (result.code == 200) Right(result)
-      else Left(ErrorResponse(result.body))
-    }).joinRight
+    val response = callPrivateApi(Method.Get, "/v1/me/getpositions?product_code=FX_BTC_JPY", "")
     response.right.map { response =>
-      val json = Json.parse(response.body)
+      val json = Json.parse(response)
       for {
-        positionsJsArray <- json.validate[JsArray].asEither.left.map(_ => InvalidResponse(response.body)).right
+        positionsJsArray <- json.validate[JsArray].asEither.left.map(_ => InvalidResponse(response)).right
       } yield {
         positionsJsArray.value.map { rawPosition =>
           val side = (rawPosition \ "side").as[String] match {
@@ -170,25 +144,28 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
     }.joinRight
   }
 
-  def getBoard: Either[String, Int] = {
-    val response = callPrivateApi(Method.Get, "/v1/board?product_code=FX_BTC_JPY", "").body
-    val json = Json.parse(response)
-    (for {
-      price <- (json \ "mid_price").validate[Int].asEither.right
-    } yield {
-      price
-    }).left.map(_ => response)
+  def getBoard: Either[ClientError, Int] = {
+    val response = callPrivateApi(Method.Get, "/v1/board?product_code=FX_BTC_JPY", "")
+    response match {
+      case Right(body) =>
+        val json = Json.parse(body)
+        (for {
+          price <- (json \ "mid_price").validate[Int].asEither.right
+        } yield {
+          price
+        }).left.map(_ => InvalidResponse(body))
+      case Left(error) => Left(error)
+    }
+
   }
 
-  private[this] def callPrivateApi(method: Method, path: String, body: String): HttpResponse[String] = {
+  private[this] def callPrivateApi(method: Method, path: String, body: String): Either[ClientError, String] = {
     val timestamp = java.time.ZonedDateTime.now().toEpochSecond.toString
     val text = timestamp + method.value + path + body
 
     val sign = generateHMAC(bitFlyerApiSecret, text)
 
-    callApiCommon(method, path, body)
-      .headers(Seq(("ACCESS-KEY", bitFlyerApiKey), ("ACCESS-TIMESTAMP", timestamp), ("ACCESS-SIGN", sign), ("Content-Type", "application/json")))
-      .asString
+    callApi(method, path, Seq(("ACCESS-KEY", bitFlyerApiKey), ("ACCESS-TIMESTAMP", timestamp), ("ACCESS-SIGN", sign), ("Content-Type", "application/json")), body)
   }
 
   private[this] def singleOrderToJsonForSpecialOrder(orders: Seq[Order]): Seq[JsObject] = {

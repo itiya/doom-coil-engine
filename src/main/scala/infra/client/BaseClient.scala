@@ -4,28 +4,35 @@ import java.math.BigInteger
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
-import scalaj.http.{Http, HttpRequest, HttpResponse}
+import domain.client.FinancialCompanyClient.{ClientError, ErrorResponse, Timeout}
+
+import scala.util.Try
+import scalaj.http.Http
 
 trait BaseClient {
   protected[this] val baseUrl: String
 
-  protected[this] def callPublicApi(method: Method, path: String, body: String, specificBaseUrl: String = baseUrl): HttpResponse[String] =
-    callApiCommon(method, path, body, specificBaseUrl)
-      .asString
-
-  protected[this] def callApiCommon(method: Method, path: String, body: String, specificBaseUrl: String = baseUrl): HttpRequest =
-    (method match {
+  protected[this] def callApi(method: Method, path: String, headers: Seq[(String, String)], body: String): Either[ClientError, String] = {
+    val request = (method match {
       case Method.Post =>
-        Http(specificBaseUrl + path)
+        Http(baseUrl + path)
           .postData(body)
       case Method.Get =>
-        Http(specificBaseUrl + path)
+        Http(baseUrl + path)
       case Method.Put =>
         throw new IllegalArgumentException("method put is not implemented in callApiCommon")
       case Method.Delete =>
         throw new IllegalArgumentException("method delete is not implemented in callApiCommon")
     }).method(method.value)
-      .timeout(connTimeoutMs = 5000, readTimeoutMs = 10000)
+      .timeout(connTimeoutMs = 5000, readTimeoutMs = 10000).headers(headers)
+
+    for {
+      response <- Try(request.asString).toEither.left.map(e => Timeout(e.getMessage)).right
+      _ <- Either.cond(response.code == 200, response.body, ErrorResponse(response.body)).right
+    } yield {
+      response.body
+    }
+  }
 
   protected[this] def generateHMAC(sharedSecret: String, preHashString: String, logic: String = "HmacSHA256"): String = {
     val secret = new SecretKeySpec(sharedSecret.getBytes, logic)

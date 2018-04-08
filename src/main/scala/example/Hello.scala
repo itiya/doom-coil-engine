@@ -12,11 +12,15 @@ import domain.client.order.single.SingleOrder.{Limit, StopLimit}
 import domain.notifier.NotifyLevel.Info
 import domain.notifier.{NotifyMessage, Topic}
 import domain.trade.ChannelBreakoutTrade
-import infra.client.bitflyer.BitFlyerClient
-import infra.client.bitflyer.BitFlyerProductCode.BtcJpyFx
-import infra.client.bitmex.BitMexClient
-import infra.client.bitmex.BitMexProductCode.BtcUsdFx
+import infra.financial_company.bitflyer.BitFlyerClient
+import infra.financial_company.bitflyer.BitFlyerProductCode.BtcJpyFx
+import infra.financial_company.bitmex.BitMexClient
+import infra.financial_company.bitmex.BitMexProductCode.BtcUsdFx
 import infra.notifier.SlackNotifier
+
+import play.api.libs.json._
+import play.api.libs.json.OFormat
+import play.api.libs.functional.syntax._
 
 import scala.util.control.Exception._
 
@@ -33,6 +37,13 @@ case class DoomConfiguration(
 
 object Hello extends App {
   val confFiles = Set(Paths.get("./application.conf"))
+
+  case class TestClass(testA: String, testB: Int)
+
+  implicit val testClassFormat: OFormat[TestClass] = (
+    (__ \ "testA").format[String] ~
+      (__ \ "testB").format[Int]
+  ) (TestClass.apply, unlift(TestClass.unapply))
 
   for {
     configResult <- (allCatch either pureconfig.loadConfigFromFiles[DoomConfiguration](confFiles))
@@ -67,6 +78,9 @@ object Hello extends App {
 
     // val client: FinancialCompanyClient = new BitFlyerClient(config.bitFlyerApiKey, config.bitFlyerApiSecret, BtcJpyFx)
     // println(client.getOrders)
-    new SlackNotifier(config.slackToken, Seq(config.slackNotifyChannel)).notify(NotifyMessage("試験ノティファイだよー！", Seq(Topic("試験アタッチメントタイトルだよ", "こっちは本文が書けるよ！"))), Info)
+    //new SlackNotifier(config.slackToken, Seq(config.slackNotifyChannel)).notify(NotifyMessage("試験ノティファイだよー！", Seq(Topic("試験アタッチメントタイトルだよ", "こっちは本文が書けるよ！"))), Info)
+    println(Json.parse("""{"testA": "test a text", "testB": 114514}""").validateOpt[TestClass])
+
+    new BitFlyerClient(config.bitFlyerApiKey, config.bitFlyerApiSecret, BtcJpyFx).getCandles(5, OneHour).foreach(println)
   }
 }
