@@ -6,19 +6,24 @@ import domain.client.FinancialCompanyClient
 import domain.client.order.Side.{Buy, Sell}
 import domain.client.order.logic.OrderWithLogic
 import domain.client.order.logic.OrderWithLogic.Stop
+import domain.notifier.NotifyLevel.Info
+import domain.notifier.{Notifier, NotifyMessage, Topic}
 
 import math.{max, min}
 
 trait ChannelBreakoutTrade extends TradeLogic {
   protected[this] val companyClient: FinancialCompanyClient
+  protected[this] val notifier: Notifier
 
   protected[this] val channelLength: Int
   protected[this] val size: Double
   protected[this] val span: CandleSpan
   protected[this] val offset: Double
   protected[this] val updateSec: Int
+  protected[this] val heartbeatCount: Int
 
   def trade(): Unit = {
+    var count = 0
     while (true) {
       val (candles, orders, positions) = getInfo
       val highAndLow = calcHighAndLow(candles)
@@ -58,6 +63,27 @@ trait ChannelBreakoutTrade extends TradeLogic {
           }
         case _ => throw new IllegalArgumentException("規定の注文以外が入っています")
       }
+
+      if (count < heartbeatCount) {
+        count = count + 1
+      } else {
+        val collateralInfo = companyClient.getCollateral match {
+          case Right(collateral) => collateral.toString + "円だよっ！"
+          case Left(_) => "取得に失敗しちゃった……"
+        }
+        val side = positionSide match {
+          case Buy => "買い"
+          case Sell => "売り"
+        }
+        val positionInfo = "建玉は" + "%.3f".format(positionSum) + "、" + side + "で建ててるよ！"
+
+        notifier.notify(
+          NotifyMessage("はーとびーとだよ！", Seq(Topic("評価額", collateralInfo), Topic("建玉", positionInfo))),
+          Info
+        )
+        count = 0
+      }
+
       Thread.sleep(updateSec * 1000)
     }
   }

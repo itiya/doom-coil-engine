@@ -51,8 +51,8 @@ class SlackNotifyClient(token: String) {
         attachments = Some(Seq(attachment))
       )
       res.onComplete {
-        case Success(str) => println(str)
-        case Failure(err) => println(err)
+        case Success(_) => ()
+        case Failure(_) => ()
       }
 
     }
