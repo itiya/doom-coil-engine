@@ -1,6 +1,6 @@
 package infra.financial_company.bitflyer
 
-import infra.financial_company.ProductCode
+import domain.client.ProductCode
 
 sealed trait BitFlyerProductCode extends ProductCode
 

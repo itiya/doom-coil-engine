@@ -4,14 +4,10 @@ import java.math.BigInteger
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
-import infra.financial_company.ProductCode
-
 import scalaj.http.{Http, HttpRequest, HttpResponse}
 
 trait BaseClient {
   protected[this] val baseUrl: String
-
-  protected[this] val productCode: ProductCode
 
   protected[this] def callPublicApi(method: Method, path: String, body: String, specificBaseUrl: String = baseUrl): HttpResponse[String] =
     callApiCommon(method, path, body, specificBaseUrl)

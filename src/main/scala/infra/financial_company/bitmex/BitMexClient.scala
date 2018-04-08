@@ -1,6 +1,10 @@
 package infra.financial_company.bitmex
 
+import domain.Position
+import domain.candle.{Candle, CandleSpan}
+import domain.client.FinancialCompanyClient
 import domain.client.FinancialCompanyClient.{ClientError, ErrorResponse, Timeout}
+import domain.client.order.OrderSetting.DefaultOrderSetting
 import domain.client.order.{Order, OrderSetting}
 import domain.client.order.logic.OrderWithLogic
 import domain.client.order.logic.OrderWithLogic.{IFD, IFO, OCO}
@@ -13,7 +17,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException
 import scala.util.Try
 import scalaj.http.HttpResponse
 
-class BitMexClient(bitMexApiKey: String, bitMexApiSecret: String, override protected[this] val productCode: BitMexProductCode) extends BaseClient {
+class BitMexClient(bitMexApiKey: String, bitMexApiSecret: String, override protected[this] val productCode: BitMexProductCode) extends BaseClient with FinancialCompanyClient {
   //override val baseUrl: String = "https://www.bitmex.com/api/v1"
   override protected[this] val baseUrl: String = "https://testnet.bitmex.com/api/v1"
 
@@ -34,6 +38,15 @@ class BitMexClient(bitMexApiKey: String, bitMexApiSecret: String, override prote
       else Left(ErrorResponse(result.body))
     }).joinRight
   }
+
+  def getOrdersWithLogic: Either[String, Seq[Int]] = ???
+  def getOrders: Either[ClientError, Seq[OrderWithLogic]] = ???
+  def getPositions: Either[ClientError, Seq[Position]] = ???
+
+  def getBoard: Either[String, Int] = ???
+  def getCandles(count: Int, span: CandleSpan): Either[ClientError, Seq[Candle]] = ???
+
+  def postCancelSingleOrders(productCode: String): Either[ClientError, Unit] = ???
 
   private[this] def ifoConverter(preOrder: Order, postOrder: Order, postOtherOrder: Order): JsArray =
     JsArray(Seq(orderToJson(preOrder, Some("OneTriggersTheOther")), orderToJson(postOrder, Some("OneUpdatesTheOtherAbsolute")), orderToJson(postOtherOrder, Some("OneUpdatesTheOtherAbsolute"))))

@@ -2,11 +2,11 @@ package infra.financial_company.bitmex
 
 import java.security.InvalidParameterException
 
+import domain.client.ProductCode
 import domain.client.order.OrderSetting.{DefaultOrderSetting, SpecificOrderSetting}
 import domain.client.order.Side.{Buy, Sell}
 import domain.client.order.{OrderSetting, Side, TimeInForce}
 import domain.client.order.TimeInForce.{FOK, GTC, IOC}
-import infra.financial_company.ProductCode
 import infra.financial_company.bitmex.BitMexProductCode.BtcUsdFx
 
 object BitMexParameterConverter {

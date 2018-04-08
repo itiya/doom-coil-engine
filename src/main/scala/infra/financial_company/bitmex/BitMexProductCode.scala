@@ -1,6 +1,6 @@
 package infra.financial_company.bitmex
 
-import infra.financial_company.ProductCode
+import domain.client.ProductCode
 
 sealed trait BitMexProductCode extends ProductCode
 

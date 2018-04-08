@@ -6,10 +6,11 @@ import domain.client.FinancialCompanyClient.ClientError
 import domain.client.order.OrderSetting
 import domain.client.order.OrderSetting.DefaultOrderSetting
 import domain.client.order.logic.OrderWithLogic
-import domain.client.order.single.SingleOrder
 
 
 trait FinancialCompanyClient {
+  protected[this] val productCode: ProductCode
+
   // def getSingleOrders: HttpResponse[String]
   def getOrdersWithLogic: Either[String, Seq[Int]] // TODO: 注文時の価格以外の情報が必要になったら汎用的なドメインのcase classにする
   def getOrders: Either[ClientError, Seq[OrderWithLogic]]

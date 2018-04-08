@@ -3,15 +3,14 @@ package infra.chart_information.cryptowatch
 import domain.candle.CandleSpan.{OneHour, OneMinute}
 import domain.candle.{Candle, CandleSpan}
 import domain.client.FinancialCompanyClient.{ClientError, ErrorResponse, InvalidResponse, Timeout}
+import domain.client.ProductCode
 import infra.client.{BaseClient, Method}
-import infra.financial_company.ProductCode
 import play.api.libs.json.{JsArray, Json}
 
 import scala.util.Try
 
 class CryptoWatchClient(financialCompany: String) extends BaseClient {
   override protected[this] val baseUrl: String = "https://api.cryptowat.ch"
-  override protected[this] val productCode = new ProductCode {}
 
   def getCandles(count: Int, span: CandleSpan): Either[ClientError, Seq[Candle]] = {
     val response = (for {
