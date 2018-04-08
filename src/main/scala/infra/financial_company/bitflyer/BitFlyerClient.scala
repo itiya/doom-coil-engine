@@ -13,14 +13,15 @@ import domain.client.order.single.SingleOrder.{Limit, Market}
 import domain.client.order.logic.OrderWithLogic
 import domain.client.order.logic.OrderWithLogic.{IFD, IFO, OCO, Stop}
 import infra.chart_information.cryptowatch.CryptoWatchClient
-import infra.client.{BaseClient, Method}
+import infra.client.{Client, Method, NormalClient, RetryableClient}
 import play.api.libs.json._
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
-class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override protected[this] val productCode: BitFlyerProductCode) extends FinancialCompanyClient with BaseClient {
+abstract class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override protected[this] val productCode: BitFlyerProductCode) extends FinancialCompanyClient {
+  self: Client =>
 
   override protected[this] val baseUrl: String = "https://api.bitflyer.jp"
-  private[this] val cryptoWatchClient = new CryptoWatchClient("btcfxjpy")
+  protected[this] val cryptoWatchClient: CryptoWatchClient
 
   def getPermissions: Either[ClientError, String] = {
     callPrivateApi(Method.Get, "/v1/me/getpermissions", "")

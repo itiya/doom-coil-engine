@@ -12,12 +12,13 @@ import domain.client.order.single.SingleOrder.{Limit, StopLimit}
 import domain.notifier.NotifyLevel.Info
 import domain.notifier.{NotifyMessage, Topic}
 import domain.trade.ChannelBreakoutTrade
+import infra.chart_information.cryptowatch.CryptoWatchClient
+import infra.client.RetryableClient
 import infra.financial_company.bitflyer.BitFlyerClient
 import infra.financial_company.bitflyer.BitFlyerProductCode.BtcJpyFx
 import infra.financial_company.bitmex.BitMexClient
 import infra.financial_company.bitmex.BitMexProductCode.BtcUsdFx
 import infra.notifier.SlackNotifier
-
 import play.api.libs.json._
 import play.api.libs.json.OFormat
 import play.api.libs.functional.syntax._
@@ -80,7 +81,14 @@ object Hello extends App {
     // println(client.getOrders)
     //new SlackNotifier(config.slackToken, Seq(config.slackNotifyChannel)).notify(NotifyMessage("試験ノティファイだよー！", Seq(Topic("試験アタッチメントタイトルだよ", "こっちは本文が書けるよ！"))), Info)
     println(Json.parse("""{"testA": "test a text", "testB": 114514}""").validateOpt[TestClass])
-
-    new BitFlyerClient(config.bitFlyerApiKey, config.bitFlyerApiSecret, BtcJpyFx).getCandles(5, OneHour).foreach(println)
+    val client = new BitFlyerClient(config.bitFlyerApiKey, config.bitFlyerApiSecret, BtcJpyFx) with RetryableClient {
+      override protected[this] val cryptoWatchClient: CryptoWatchClient  = new CryptoWatchClient("btcfxjpy") with RetryableClient {
+        override val retryCount: Int = 5
+        override val delaySec: Int = 2
+      }
+      override val retryCount: Int = 5
+      override val delaySec = 2
+    }
+    println(client.getCandles(5, OneHour))
   }
 }

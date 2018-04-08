@@ -9,11 +9,13 @@ import domain.client.order.logic.OrderWithLogic
 import domain.client.order.logic.OrderWithLogic.{IFD, IFO, OCO}
 import domain.client.order.single.SingleOrder
 import domain.client.order.single.SingleOrder.{Limit, Market, StopLimit}
-import infra.client.{BaseClient, Method}
+import infra.client.{Client, Method}
 import play.api.libs.json.{JsArray, JsObject, Json}
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
-class BitMexClient(bitMexApiKey: String, bitMexApiSecret: String, override protected[this] val productCode: BitMexProductCode) extends BaseClient with FinancialCompanyClient {
+class BitMexClient(bitMexApiKey: String, bitMexApiSecret: String, override protected[this] val productCode: BitMexProductCode) extends FinancialCompanyClient {
+  self: Client =>
+
   //override val baseUrl: String = "https://www.bitmex.com/api/v1"
   override protected[this] val baseUrl: String = "https://testnet.bitmex.com/api/v1"
 

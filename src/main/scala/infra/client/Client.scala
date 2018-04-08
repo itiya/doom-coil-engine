@@ -9,10 +9,20 @@ import domain.client.FinancialCompanyClient.{ClientError, ErrorResponse, Timeout
 import scala.util.Try
 import scalaj.http.Http
 
-trait BaseClient {
+trait Client {
   protected[this] val baseUrl: String
 
-  protected[this] def callApi(method: Method, path: String, headers: Seq[(String, String)], body: String): Either[ClientError, String] = {
+  protected[this] def callApi(method: Method, path: String, headers: Seq[(String, String)], body: String): Either[ClientError, String]
+
+  protected[this] def generateHMAC(sharedSecret: String, preHashString: String, logic: String = "HmacSHA256"): String = {
+    val secret = new SecretKeySpec(sharedSecret.getBytes, logic)
+    val mac = Mac.getInstance(logic)
+    mac.init(secret)
+    val hashString: Array[Byte] = mac.doFinal(preHashString.getBytes)
+    String.format("%032x", new BigInteger(1, hashString))
+  }
+
+  private[client] def callApiImpl(method: Method, path: String, headers: Seq[(String, String)], body: String): Either[ClientError, String] = {
     val request = (method match {
       case Method.Post =>
         Http(baseUrl + path)
@@ -32,13 +42,5 @@ trait BaseClient {
     } yield {
       response.body
     }
-  }
-
-  protected[this] def generateHMAC(sharedSecret: String, preHashString: String, logic: String = "HmacSHA256"): String = {
-    val secret = new SecretKeySpec(sharedSecret.getBytes, logic)
-    val mac = Mac.getInstance(logic)
-    mac.init(secret)
-    val hashString: Array[Byte] = mac.doFinal(preHashString.getBytes)
-    String.format("%032x", new BigInteger(1, hashString))
   }
 }
