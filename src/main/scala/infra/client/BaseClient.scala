@@ -4,6 +4,8 @@ import java.math.BigInteger
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
+import infra.financial_company.ProductCode
+
 import scalaj.http.{Http, HttpRequest, HttpResponse}
 
 trait BaseClient {

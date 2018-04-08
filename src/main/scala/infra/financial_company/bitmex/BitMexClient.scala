@@ -1,4 +1,4 @@
-package infra.client.bitmex
+package infra.financial_company.bitmex
 
 import domain.client.FinancialCompanyClient.{ClientError, ErrorResponse, Timeout}
 import domain.client.order.{Order, OrderSetting}

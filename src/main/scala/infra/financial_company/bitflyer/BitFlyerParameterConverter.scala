@@ -1,4 +1,4 @@
-package infra.client.bitflyer
+package infra.financial_company.bitflyer
 
 import java.security.InvalidParameterException
 
@@ -6,8 +6,8 @@ import domain.client.order.{OrderSetting, Side, TimeInForce}
 import domain.client.order.OrderSetting.{DefaultOrderSetting, SpecificOrderSetting}
 import domain.client.order.Side.{Buy, Sell}
 import domain.client.order.TimeInForce.{FOK, GTC, IOC}
-import infra.client.ProductCode
-import infra.client.bitflyer.BitFlyerProductCode.BtcJpyFx
+import infra.financial_company.ProductCode
+import infra.financial_company.bitflyer.BitFlyerProductCode.BtcJpyFx
 
 
 object BitFlyerParameterConverter {

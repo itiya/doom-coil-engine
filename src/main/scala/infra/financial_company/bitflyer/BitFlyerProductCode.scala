@@ -1,6 +1,6 @@
-package infra.client.bitflyer
+package infra.financial_company.bitflyer
 
-import infra.client.ProductCode
+import infra.financial_company.ProductCode
 
 sealed trait BitFlyerProductCode extends ProductCode
 

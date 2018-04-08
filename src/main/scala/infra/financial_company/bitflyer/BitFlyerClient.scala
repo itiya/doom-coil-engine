@@ -1,4 +1,4 @@
-package infra.client.bitflyer
+package infra.financial_company.bitflyer
 
 import java.security.InvalidParameterException
 
@@ -14,6 +14,7 @@ import domain.client.order.single.SingleOrder
 import domain.client.order.single.SingleOrder.{Limit, Market}
 import domain.client.order.logic.OrderWithLogic
 import domain.client.order.logic.OrderWithLogic.{IFD, IFO, OCO, Stop}
+import infra.chart_information.cryptowatch.CryptoWatchClient
 import infra.client.{BaseClient, Method}
 import play.api.libs.json._
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
@@ -24,7 +25,7 @@ import scalaj.http.HttpResponse
 class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override protected[this] val productCode: BitFlyerProductCode) extends FinancialCompanyClient with BaseClient {
 
   override protected[this] val baseUrl: String = "https://api.bitflyer.jp"
-  private[this] val cryptoWatchUrl: String = "https://api.cryptowat.ch"
+  private[this] val cryptoWatchClient = new CryptoWatchClient("btcfxjpy")
 
   def getPermissions: HttpResponse[String] = {
     callPrivateApi(Method.Get, "/v1/me/getpermissions", "")
@@ -35,34 +36,7 @@ class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override
   }
 
   def getCandles(count: Int, span: CandleSpan): Either[ClientError, Seq[Candle]] = {
-    val response = (for {
-      result <- Try(callPublicApi(Method.Get, "/markets/bitflyer/btcfxjpy/ohlc", "", cryptoWatchUrl)).toEither.left.map(e => Timeout(e.getMessage): ClientError).right
-    } yield {
-      if (result.code == 200) Right(result)
-      else Left(ErrorResponse(result.body))
-    }).joinRight
-    val result = response.right.map { response =>
-      val json = Json.parse(response.body)
-      val spanInt = span match {
-        case OneHour => 3600
-        case OneMinute => 60
-        case _ => throw new IllegalArgumentException("未実装のローソク足間隔です")
-      }
-      val rawCandles = (json \ "result" \ spanInt.toString).validate[JsArray]
-      rawCandles.asEither.left.map(_ => InvalidResponse(response.body))
-    }.joinRight
-    result.right.map { rawCandles =>
-      rawCandles.value.map { rawCandle =>
-        val validRawCandle = rawCandle.validate[JsArray].fold(valid => JsArray(), identity).value
-        Candle(
-          validRawCandle(0).as[Double],
-          validRawCandle(1).as[Double],
-          validRawCandle(4).as[Double],
-          validRawCandle(2).as[Double],
-          validRawCandle(3).as[Double]
-        )
-      }.takeRight(count)
-    }
+    cryptoWatchClient.getCandles(count, span)
   }
 
   def postSingleOrder(singleOrder: SingleOrder, setting: OrderSetting): HttpResponse[String] = {
