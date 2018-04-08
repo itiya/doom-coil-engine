@@ -15,7 +15,11 @@ import domain.client.order.logic.OrderWithLogic.{IFD, IFO, OCO, Stop}
 import infra.chart_information.cryptowatch.CryptoWatchClient
 import infra.client.{Client, Method, NormalClient, RetryableClient}
 import play.api.libs.json._
+import play.api.libs.json.Reads._
+import play.api.libs.functional.syntax._
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
+
+
 
 abstract class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override protected[this] val productCode: BitFlyerProductCode) extends FinancialCompanyClient {
   self: Client =>
@@ -33,6 +37,22 @@ abstract class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String,
 
   def getCandles(count: Int, span: CandleSpan): Either[ClientError, Seq[Candle]] = {
     cryptoWatchClient.getCandles(count, span)
+  }
+
+  def getBalance: Either[ClientError, Double] = {
+    case class Balance(currencyCode: String, amount: Double, available: Double)
+    implicit val balanceReads: Reads[Balance] = (
+      (JsPath \ "currency_code").read[String] ~
+        (JsPath \ "amount").read[Double] ~
+        (JsPath \ "available").read[Double]
+    )(Balance.apply _)
+
+    callPrivateApi(Method.Get, "/v1/me/getbalance", "").right.map { body =>
+      Json.parse(body).validate[Seq[Balance]].asEither.left.map(_ => InvalidResponse(body))
+    }.joinRight.right.map(balances => {
+      println(balances)
+      balances.head.amount
+    })
   }
 
   def postSingleOrder(singleOrder: SingleOrder, setting: OrderSetting): Either[ClientError, String] = {
@@ -74,8 +94,10 @@ abstract class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String,
     callPrivateApi(Method.Post, "/v1/me/cancelallchildorders", body).right.map(_ => ())
   }
 
-  def getCollateral: Either[ClientError, String] =
-    callPrivateApi(Method.Get, "/v1/me/getcollateral", "")
+  def getCollateral: Either[ClientError, Double] =
+    callPrivateApi(Method.Get, "/v1/me/getcollateral", "").right.map { body =>
+      (Json.parse(body) \ "collateral").validate[Double].asEither.left.map(_ => InvalidResponse(body))
+    }.joinRight
 
   def getOrdersWithLogic: Either[ClientError, Seq[Int]] = {
     callPrivateApi(Method.Get, "/v1/me/getparentorders?parent_order_state=ACTIVE&product_code=FX_BTC_JPY", "") match {

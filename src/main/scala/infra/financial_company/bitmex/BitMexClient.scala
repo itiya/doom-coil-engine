@@ -34,6 +34,8 @@ class BitMexClient(bitMexApiKey: String, bitMexApiSecret: String, override prote
   def getOrdersWithLogic: Either[ClientError, Seq[Int]] = ???
   def getOrders: Either[ClientError, Seq[OrderWithLogic]] = ???
   def getPositions: Either[ClientError, Seq[Position]] = ???
+  def getBalance: Either[ClientError, Double] = ???
+  def getCollateral: Either[ClientError, Double] = ???
 
   def getBoard: Either[ClientError, Int] = ???
   def getCandles(count: Int, span: CandleSpan): Either[ClientError, Seq[Candle]] = ???

@@ -15,6 +15,8 @@ trait FinancialCompanyClient {
   def getOrdersWithLogic: Either[ClientError, Seq[Int]] // TODO: 注文時の価格以外の情報が必要になったら汎用的なドメインのcase classにする
   def getOrders: Either[ClientError, Seq[OrderWithLogic]]
   def getPositions: Either[ClientError, Seq[Position]]
+  def getBalance: Either[ClientError, Double]
+  def getCollateral: Either[ClientError, Double]
 
   // def getCollateral: HttpResponse[String]
   def getBoard: Either[ClientError, Int] // TODO: 板情報が平均価格以外も取れる必要ができたら汎用的なドメインのcase classにする
