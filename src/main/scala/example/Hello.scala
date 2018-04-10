@@ -48,7 +48,7 @@ object Hello extends App {
       override protected[this] val channelLength: Int = 18
       override protected[this] val size: Double = 0.3
       override protected[this] val span: CandleSpan = OneHour
-      override protected[this] val offset: Double = 50.0
+      override protected[this] val offset: Double = 1.0
       override protected[this] val updateSec: Int = 60
       override protected[this] val heartbeatCount: Int = 10
     }
