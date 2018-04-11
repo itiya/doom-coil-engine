@@ -96,7 +96,12 @@ abstract class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String,
 
   def getCollateral: Either[ClientError, Double] =
     callPrivateApi(Method.Get, "/v1/me/getcollateral", "").right.map { body =>
-      (Json.parse(body) \ "collateral").validate[Double].asEither.left.map(_ => InvalidResponse(body))
+      for {
+        collateral <- (Json.parse(body) \ "collateral").validate[Double].asEither.left.map(_ => InvalidResponse(body))
+        openPositionPnl <- (Json.parse(body) \ "open_position_pnl").validate[Double].asEither.left.map(_ => InvalidResponse(body))
+      } yield {
+        collateral + openPositionPnl
+      }
     }.joinRight
 
   def getOrdersWithLogic: Either[ClientError, Seq[Int]] = {
