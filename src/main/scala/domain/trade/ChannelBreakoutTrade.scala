@@ -12,7 +12,6 @@ import domain.notifier.{Notifier, NotifyMessage, Topic}
 import math.{max, min}
 
 trait ChannelBreakoutTrade extends TradeLogic {
-  protected[this] val companyClient: FinancialCompanyClient
   protected[this] val notifier: Notifier
 
   protected[this] val channelLength: Int

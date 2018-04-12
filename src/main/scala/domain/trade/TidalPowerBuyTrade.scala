@@ -8,7 +8,6 @@ import domain.client.order.single.SingleOrder.Limit
 import org.joda.time.DateTime
 
 trait TidalPowerBuyTrade extends TradeLogic {
-  protected[this] val companyClient: FinancialCompanyClient
 
   def trade(): Unit = {
     val profit = 30000
