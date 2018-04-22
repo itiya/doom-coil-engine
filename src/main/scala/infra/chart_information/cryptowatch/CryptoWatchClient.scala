@@ -14,14 +14,14 @@ class CryptoWatchClient(financialCompany: String) {
   override protected[this] val baseUrl: String = "https://api.cryptowat.ch"
 
   def getCandles(count: Int, span: CandleSpan): Either[ClientError, Seq[Candle]] = {
-    val response = callApi(Method.Get, "/markets/bitflyer/" + financialCompany + "/ohlc", Seq(), "")
+    val spanSec = span match {
+      case OneHour => 3600
+      case OneMinute => 60
+      case _ => throw new IllegalArgumentException("未実装のローソク足間隔です")
+    }
+    val response = callApi(Method.Get, "/markets/" + financialCompany + "/ohlc?periods=" + spanSec, Seq(), "")
     val result = response.right.map { response =>
       val json = Json.parse(response)
-      val spanSec = span match {
-        case OneHour => 3600
-        case OneMinute => 60
-        case _ => throw new IllegalArgumentException("未実装のローソク足間隔です")
-      }
       val rawCandles = (json \ "result" \ spanSec.toString).validate[Seq[Seq[Double]]]
       rawCandles.asEither.left.map(_ => InvalidResponse(response))
     }.joinRight

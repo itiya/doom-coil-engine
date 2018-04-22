@@ -32,7 +32,7 @@ trait Client {
       case Method.Put =>
         throw new IllegalArgumentException("method put is not implemented in callApiCommon")
       case Method.Delete =>
-        throw new IllegalArgumentException("method delete is not implemented in callApiCommon")
+        Http(baseUrl + path)
     }).method(method.value)
       .timeout(connTimeoutMs = 5000, readTimeoutMs = 10000).headers(headers)
 
