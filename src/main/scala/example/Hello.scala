@@ -5,10 +5,13 @@ import java.nio.file._
 import domain.candle.CandleSpan
 import domain.candle.CandleSpan.{OneHour, OneMinute}
 import domain.client.FinancialCompanyClient
+import domain.client.order.Side.{Buy, Sell}
+import domain.client.order.logic.OrderWithLogic.{IFO, OCO, Stop}
+import domain.client.order.single.SingleOrder.{Limit, Market}
 import domain.notifier.Notifier
 import domain.trade.{BollingerBandTrade, ChannelBreakoutTrade, RSIScalpingTrade}
 import infra.chart_information.cryptowatch.CryptoWatchClient
-import infra.client.RetryableClient
+import infra.client.{NormalClient, RetryableClient}
 import infra.financial_company.bitflyer.BitFlyerClient
 import infra.financial_company.bitflyer.BitFlyerProductCode.BtcJpyFx
 import infra.financial_company.bitmex.BitMexClient
@@ -76,6 +79,21 @@ object Hello extends App {
 //      }
 //    }
 //    rsi.trade()
-    
+
+    val oco = OCO(
+      Limit(Sell, 8900, 80),
+      Stop(Sell, 8700, 80)
+    )
+    val ifo = IFO(
+      Market(Buy, 80),
+      oco
+    )
+
+    new BitMexClient(config.bitMexApiKey, config.bitMexApiSecret, BtcUsdFx) with NormalClient {
+      override protected[this] val cryptoWatchClient: CryptoWatchClient = new CryptoWatchClient("bitmex/btcusd-perpetual-futures") with RetryableClient {
+        override val retryCount: Int = 5
+        override val delaySec: Int = 2
+      }
+    }.postOrderWithLogic(ifo)
   }
 }

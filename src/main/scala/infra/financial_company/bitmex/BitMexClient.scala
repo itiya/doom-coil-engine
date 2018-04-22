@@ -7,13 +7,14 @@ import domain.client.FinancialCompanyClient.{ClientError, InvalidResponse}
 import domain.client.order.Side.{Buy, Sell}
 import domain.client.order.{Order, OrderSetting}
 import domain.client.order.logic.OrderWithLogic
-import domain.client.order.logic.OrderWithLogic.{IFD, IFO, OCO}
+import domain.client.order.logic.OrderWithLogic.{IFD, IFO, OCO, Stop}
 import domain.client.order.single.SingleOrder
 import domain.client.order.single.SingleOrder.{Limit, Market, StopLimit}
 import infra.chart_information.cryptowatch.CryptoWatchClient
 import infra.client.{Client, Method}
 import play.api.libs.json.{JsArray, JsObject, Json}
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
+
 import scala.math.abs
 
 abstract class BitMexClient(bitMexApiKey: String, bitMexApiSecret: String, override protected[this] val productCode: BitMexProductCode) extends FinancialCompanyClient {
@@ -80,13 +81,24 @@ abstract class BitMexClient(bitMexApiKey: String, bitMexApiSecret: String, overr
           case _: Limit => ("Limit", None)
           case stopLimit: StopLimit => ("StopLimit", Some(stopLimit.trigger))
         }
-        val price = singleOrder.price.get
+        val price = singleOrder.price
         Json.obj(
           "symbol" -> BitMexParameterConverter.productCode(productCode),
           "side" -> BitMexParameterConverter.side(singleOrder.side),
           "ordType" -> preOrderType,
           "orderQty" -> singleOrder.size,
           "price" -> price,
+          "clOrdLinkID" -> linkId.toString,
+          "contingencyType" -> contingencyType,
+          "stopPx" -> stopTrigger
+        )
+      case stopOrder: Stop =>
+        val (preOrderType, stopTrigger) = ("Stop", stopOrder.price)
+        Json.obj(
+          "symbol" -> BitMexParameterConverter.productCode(productCode),
+          "side" -> BitMexParameterConverter.side(stopOrder.side),
+          "ordType" -> preOrderType,
+          "orderQty" -> stopOrder.size,
           "clOrdLinkID" -> linkId.toString,
           "contingencyType" -> contingencyType,
           "stopPx" -> stopTrigger
