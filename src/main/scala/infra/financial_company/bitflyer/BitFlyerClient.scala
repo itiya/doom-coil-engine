@@ -20,7 +20,6 @@ import play.api.libs.functional.syntax._
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
 
-
 abstract class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String, override protected[this] val productCode: BitFlyerProductCode) extends FinancialCompanyClient {
   self: Client =>
 
@@ -45,12 +44,11 @@ abstract class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String,
       (JsPath \ "currency_code").read[String] ~
         (JsPath \ "amount").read[Double] ~
         (JsPath \ "available").read[Double]
-    )(Balance.apply _)
+      ) (Balance.apply _)
 
     callPrivateApi(Method.Get, "/v1/me/getbalance", "").right.map { body =>
       Json.parse(body).validate[Seq[Balance]].asEither.left.map(_ => InvalidResponse(body))
     }.joinRight.right.map(balances => {
-      println(balances)
       balances.head.amount
     })
   }
@@ -133,9 +131,22 @@ abstract class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String,
               case "BUY" => Buy
             }
             getParentOrderDetail(Stop(side, (rawOrder \ "price").as[Int], (rawOrder \ "size").as[Double]), (rawOrder \ "parent_order_id").as[String])
+          case "OCO" =>
+            getParentOrderDetailForOCO((rawOrder \ "parent_order_id").as[String])
+            throw new NotImplementedException()
           case _ => throw new NotImplementedException()
         }
       }
+    }
+  }
+
+  private[this] def getParentOrderDetailForOCO(id: String) = {
+    val response = callPrivateApi(Method.Get, "/v1/me/getparentorder?parent_order_id=" + id, "")
+    response match {
+      case Right(httpResponse) =>
+        val json = Json.parse(httpResponse)
+        println(json)
+      case _ => new NotImplementedException()
     }
   }
 
@@ -166,7 +177,7 @@ abstract class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String,
             case "SELL" => Sell
             case "BUY" => Buy
           }
-          Position(side, (rawPosition \ "size").as[Double])
+          Position(side, (rawPosition \ "size").as[Double], (rawPosition \ "price").as[Double])
         }
       }
     }.joinRight
@@ -212,6 +223,15 @@ abstract class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String,
           "price" -> price,
           "size" -> singleOrder.size
         )
+      case stopOrder: Stop =>
+        val orderType = "STOP"
+        Json.obj(
+          "product_code" -> BitFlyerParameterConverter.productCode(productCode),
+          "condition_type" -> orderType,
+          "side" -> BitFlyerParameterConverter.side(stopOrder.side),
+          "size" -> stopOrder.size,
+          "trigger_price" -> stopOrder.price
+        )
       case _ => throw new InvalidParameterException("except single order is not implemented")
     }
   }
@@ -227,23 +247,39 @@ abstract class BitFlyerClient(bitFlyerApiKey: String, bitFlyerApiSecret: String,
     Seq(json)
   }
 
-  private[this] def singleOrderToJson(singleOrder: SingleOrder, setting: OrderSetting): String = {
-    val orderType = singleOrder match {
+  private[this] def singleOrderToJson(order: Order, setting: OrderSetting): String = {
+    val orderType = order match {
       case _: Market => "MARKET"
       case _: Limit => "LIMIT"
+      case _: Stop => "STOP"
       case _ => throw new NotImplementedException()
     }
-    val price = singleOrder.price.getOrElse(0)
-    val specificSetting = BitFlyerParameterConverter.orderSetting(setting)
-    Json.obj(
-      "product_code" -> BitFlyerParameterConverter.productCode(productCode),
-      "child_order_type" -> orderType,
-      "side" -> BitFlyerParameterConverter.side(singleOrder.side),
-      "price" -> price,
-      "size" -> singleOrder.size,
-      "minute_to_expire" ->  specificSetting.expireMinutes,
-      "time_in_force" -> BitFlyerParameterConverter.timeInForce(specificSetting.timeInForce)
-    ).toString()
+    order match {
+      case singleOrder: SingleOrder =>
+        val price = singleOrder.price.getOrElse(0)
+        val specificSetting = BitFlyerParameterConverter.orderSetting(setting)
+        Json.obj(
+          "product_code" -> BitFlyerParameterConverter.productCode(productCode),
+          "child_order_type" -> orderType,
+          "side" -> BitFlyerParameterConverter.side(singleOrder.side),
+          "price" -> price,
+          "size" -> singleOrder.size,
+          "minute_to_expire" -> specificSetting.expireMinutes,
+          "time_in_force" -> BitFlyerParameterConverter.timeInForce(specificSetting.timeInForce)
+        ).toString()
+      case stopOrder: Stop =>
+        val specificSetting = BitFlyerParameterConverter.orderSetting(setting)
+        Json.obj(
+          "product_code" -> BitFlyerParameterConverter.productCode(productCode),
+          "child_order_type" -> orderType,
+          "side" -> BitFlyerParameterConverter.side(stopOrder.side),
+          "size" -> stopOrder.size,
+          "trigger_price" -> stopOrder.price,
+          "minute_to_expire" -> specificSetting.expireMinutes,
+          "time_in_force" -> BitFlyerParameterConverter.timeInForce(specificSetting.timeInForce)
+        ).toString()
+    }
+
   }
 
 }

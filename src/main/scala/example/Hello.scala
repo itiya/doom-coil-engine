@@ -9,7 +9,7 @@ import domain.client.order.Side.{Buy, Sell}
 import domain.client.order.logic.OrderWithLogic.{IFO, OCO, Stop}
 import domain.client.order.single.SingleOrder.{Limit, Market}
 import domain.notifier.Notifier
-import domain.trade.{BollingerBandTrade, ChannelBreakoutTrade, RSIScalpingTrade}
+import domain.trade.{BollingerBandTrade, ChannelBreakoutOneMinuteTrade, ChannelBreakoutTrade, RSIScalpingTrade}
 import infra.chart_information.cryptowatch.CryptoWatchClient
 import infra.client.{NormalClient, RetryableClient}
 import infra.financial_company.bitflyer.BitFlyerClient
@@ -80,20 +80,17 @@ object Hello extends App {
 //    }
 //    rsi.trade()
 
-    val oco = OCO(
-      Limit(Sell, 8900, 80),
-      Stop(Sell, 8700, 80)
-    )
-    val ifo = IFO(
-      Market(Buy, 80),
-      oco
-    )
+//    val client = new BitFlyerClient(config.bitFlyerApiKey, config.bitFlyerApiSecret, BtcJpyFx) with NormalClient {
+//      override protected[this] val cryptoWatchClient: CryptoWatchClient = new CryptoWatchClient("bitflyer/btcfxjpy") with RetryableClient {
+//        override val retryCount: Int = 5
+//        override val delaySec: Int = 2
+//      }
+//    }
+//
+//    new ChannelBreakoutOneMinuteTrade {
+//      override protected[this] val notifier: Notifier = new SlackNotifier(config.slackToken, Seq(config.slackNotifyChannel))
+//      override protected[this] val companyClient: FinancialCompanyClient = client
+//    }.trade()
 
-    new BitMexClient(config.bitMexApiKey, config.bitMexApiSecret, BtcUsdFx) with NormalClient {
-      override protected[this] val cryptoWatchClient: CryptoWatchClient = new CryptoWatchClient("bitmex/btcusd-perpetual-futures") with RetryableClient {
-        override val retryCount: Int = 5
-        override val delaySec: Int = 2
-      }
-    }.postOrderWithLogic(ifo)
   }
 }

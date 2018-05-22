@@ -53,7 +53,7 @@ abstract class BitMexClient(bitMexApiKey: String, bitMexApiSecret: String, overr
       if (currentQuantity == 0.0) {
         Seq()
       } else {
-        Seq(Position(if (currentQuantity > 0) Buy else Sell, abs(currentQuantity)))
+        Seq(Position(if (currentQuantity > 0) Buy else Sell, abs(currentQuantity), 0.0))
       }
     }
   }
