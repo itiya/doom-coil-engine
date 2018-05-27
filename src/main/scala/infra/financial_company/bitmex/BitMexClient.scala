@@ -4,6 +4,7 @@ import domain.Position
 import domain.candle.{Candle, CandleSpan}
 import domain.client.FinancialCompanyClient
 import domain.client.FinancialCompanyClient.{ClientError, InvalidResponse}
+import domain.client.order.OrderSetting.DefaultOrderSetting
 import domain.client.order.Side.{Buy, Sell}
 import domain.client.order.{Order, OrderSetting}
 import domain.client.order.logic.OrderWithLogic
@@ -57,6 +58,24 @@ abstract class BitMexClient(bitMexApiKey: String, bitMexApiSecret: String, overr
       }
     }
   }
+
+  def getPosition: Either[ClientError, Position] = {
+    for {
+      response <-callPrivateApi(Method.Get, "/position", "").right
+      positionsJsArray <- Json.parse(response).validate[JsArray].asEither.left.map(_ => InvalidResponse(response)).right
+    } yield {
+      val currentQuantity = positionsJsArray.value.map { rawPosition =>
+        (rawPosition \ "currentQty").as[Double]
+      }.foldLeft(0.0)((c, z) => c + z)
+
+      if (currentQuantity == 0.0) {
+        Position(Buy, 0.0, 0.0)
+      } else {
+        Position(if (currentQuantity > 0) Buy else Sell, abs(currentQuantity), 0.0)
+      }
+    }
+  }
+
   def getBalance: Either[ClientError, Double] = ???
   def getCollateral: Either[ClientError, Double] = ???
 
@@ -68,6 +87,16 @@ abstract class BitMexClient(bitMexApiKey: String, bitMexApiSecret: String, overr
 
   def postCancelSingleOrders(productCode: String): Either[ClientError, Unit] = {
     callPrivateApi(Method.Delete, "/order/all", "").right.map(_ => ())
+  }
+
+  def postSingleOrder(singleOrder: SingleOrder, setting: OrderSetting = DefaultOrderSetting): Either[ClientError, Unit] = {
+    val parameter = singleOrder match {
+      case _: Market =>
+        orderToJson(singleOrder, None)
+      case _ =>
+        throw new NotImplementedException()
+    }
+    callPrivateApi(Method.Post, "/order", parameter.toString()).right.map(_ => ())
   }
 
   private[this] def ifoConverter(preOrder: Order, postOrder: Order, postOtherOrder: Order): JsArray =
