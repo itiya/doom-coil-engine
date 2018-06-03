@@ -30,10 +30,23 @@ trait ChannelBreakoutForMex {
       count += 1
       if (count > 60) {
         count = 0
+        val position = getPosition
+        val actualSide = position.side match {
+          case Buy => "Buy"
+          case Sell => "Sell"
+        }
+        val logicalSide = side.fold("None"){
+          case Buy => "Buy"
+          case Sell => "Sell"
+        }
         notifier.notify(
           NotifyMessage(
             "Keep Alive!",
-            Seq(Topic("Size", getPosition.size.toString))
+            Seq(
+              Topic("Size", position.size.toString),
+              Topic("Actual side", actualSide),
+              Topic("Logical side", logicalSide)
+            )
           ),
           NotifyLevel.Info
         )
