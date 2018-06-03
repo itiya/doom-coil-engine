@@ -44,7 +44,7 @@ object Hello extends App {
       override protected[this] val notifier: Notifier = new SlackNotifier(config.slackToken, Seq(config.slackNotifyChannel))
       override protected[this] val channelLength: Int = 18
       override protected[this] val size: Double = 0.3
-      override protected[this] val span: CandleSpan = OneMinute
+      override protected[this] val span: CandleSpan = OneHour
       override protected[this] val offset: Int = 1
       override protected[this] val updateSec: Int = 60
       override protected[this] val heartbeatCount: Int = 10

@@ -24,9 +24,21 @@ trait ChannelBreakoutForMex {
 
   def trade(): Unit = {
     var side = None: Option[Side]
+    var count = 60
     while (true) {
       side = tradeImpl(side)
       Thread.sleep(updateSec * 1000)
+      count += 1
+      if (count > 60) {
+        count = 0
+        notifier.notify(
+          NotifyMessage(
+            "Keep Alive!",
+            Seq(Topic("Size", getPosition.size.toString))
+          ),
+          NotifyLevel.Info
+        )
+      }
     }
   }
 
@@ -48,14 +60,14 @@ trait ChannelBreakoutForMex {
   }
 
   private[this] def checkBreakAndMakePosition(nowSide: Side): Side = {
-    val breakChecker = getHighAndLowAndNow
+    val breakChecker = getBreakChecker
 
     nowSide match {
       case Buy if breakChecker.breakLow =>
-        makePosition(Sell, breakChecker.now.low)
+        makePosition(Sell, breakChecker.nowChecker.now.low)
         Sell
       case Sell if breakChecker.breakHigh =>
-        makePosition(Buy, breakChecker.now.high)
+        makePosition(Buy, breakChecker.nowChecker.now.high)
         Buy
       case _ =>
         nowSide
@@ -87,6 +99,12 @@ trait ChannelBreakoutForMex {
                 ),
                 NotifyLevel.Error
               )
+              Thread.sleep(60 * 1000)
+              if (getPosition.side != side) {
+                makePositionImpl(side, size)
+              } else {
+                breakOutNotify(side)
+              }
           }
       }
     }
@@ -125,13 +143,41 @@ trait ChannelBreakoutForMex {
     )
   }
 
+  case class BreakChecker(nowChecker: HighAndLowAndNow, prevChecker: HighAndLowAndNow) {
+    def breakHigh: Boolean = nowChecker.breakHigh || prevChecker.breakHigh
+    def breakLow: Boolean = nowChecker.breakLow || prevChecker.breakLow
+  }
   case class HighAndLowAndNow(high: Double, low: Double, now: Candle) {
     def breakHigh: Boolean = high < now.high
     def breakLow: Boolean = low > now.low
   }
+
+  private[this] def getBreakChecker: BreakChecker = {
+    def calcBreakChecker(candles: Seq[Candle]): BreakChecker = {
+      val sortedCandles = candles.sortWith((c1, c2) => c1.time > c2.time)
+      val target = sortedCandles.tail.take(channelLength)
+      val nowCandle = sortedCandles.head
+      val prevTarget = sortedCandles.tail.tail
+      val prevCandle = sortedCandles.tail.head
+      BreakChecker(
+        HighAndLowAndNow(
+          target.foldLeft(Double.MinValue)((high, candle) => max(high, candle.high)),
+          target.foldLeft(Double.MaxValue)((low, candle) => min(low, candle.low)),
+          nowCandle
+        ),
+        HighAndLowAndNow(
+          prevTarget.foldLeft(Double.MinValue)((high, candle) => max(high, candle.high)),
+          prevTarget.foldLeft(Double.MaxValue)((low, candle) => min(low, candle.low)),
+          prevCandle
+        )
+      )
+    }
+    calcBreakChecker(getCandles)
+  }
+
   private[this] def getHighAndLowAndNow: HighAndLowAndNow = {
     def calcHighAndLow(candles: Seq[Candle]): HighAndLowAndNow = {
-      val target = candles.sortWith((c1, c2) => c1.time > c2.time).tail
+      val target = candles.sortWith((c1, c2) => c1.time > c2.time).tail.take(channelLength)
       val nowCandle = candles.sortWith((c1, c2) => c1.time > c2.time).head
       HighAndLowAndNow(
         target.foldLeft(Double.MinValue)((high, candle) => max(high, candle.high)),
@@ -144,7 +190,7 @@ trait ChannelBreakoutForMex {
 
   private[this] def getCandles: Seq[Candle] =
     (for {
-      candles <- companyClient.getCandles(channelLength + 1, span).right
+      candles <- companyClient.getCandles(channelLength + 2, span).right
     } yield {
       candles
     }).left.map { _ =>
