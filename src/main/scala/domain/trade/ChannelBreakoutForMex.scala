@@ -23,7 +23,7 @@ trait ChannelBreakoutForMex {
   protected[this] val heartbeatCount: Int
 
   def trade(): Unit = {
-    var side = None: Option[Side]
+    var side = checkPosition
     var count = 60
     while (true) {
       side = tradeImpl(side)
@@ -52,6 +52,15 @@ trait ChannelBreakoutForMex {
         )
       }
       Thread.sleep(updateSec * 1000)
+    }
+  }
+
+  private[this] def checkPosition: Option[Side] = {
+    val position = getPosition
+    if (position.size == 0.0) {
+      None
+    } else {
+      Some(position.side)
     }
   }
 
