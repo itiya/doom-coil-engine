@@ -27,7 +27,6 @@ trait ChannelBreakoutForMex {
     var count = 60
     while (true) {
       side = tradeImpl(side)
-      Thread.sleep(updateSec * 1000)
       count += 1
       if (count > 60) {
         count = 0
@@ -39,6 +38,7 @@ trait ChannelBreakoutForMex {
           NotifyLevel.Info
         )
       }
+      Thread.sleep(updateSec * 1000)
     }
   }
 
