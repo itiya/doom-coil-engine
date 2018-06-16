@@ -1,4 +1,6 @@
 #!/bin/sh
+
+# このスクリプトは最後のコマンドが終了しないため、conoha側で動き出したら終了する必要がある
 cd $(dirname ${BASH_SOURCE:-$0}) # move script dir
 cd ../
 sbt assembly
