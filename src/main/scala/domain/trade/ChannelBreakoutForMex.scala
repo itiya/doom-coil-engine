@@ -106,7 +106,8 @@ trait ChannelBreakoutForMex {
           error match {
             case Timeout(_) =>
               Thread.sleep(60 * 1000)
-              if (getPosition.side != side) {
+              val position = getPosition
+              if (position.side != side || position.size == 0.0) {
                 makePositionImpl(side, size)
               } else {
                 breakOutNotify(side)
@@ -122,7 +123,8 @@ trait ChannelBreakoutForMex {
                 NotifyLevel.Error
               )
               Thread.sleep(60 * 1000)
-              if (getPosition.side != side) {
+              val position = getPosition
+              if (position.side != side || position.size == 0.0) {
                 makePositionImpl(side, size)
               } else {
                 breakOutNotify(side)
